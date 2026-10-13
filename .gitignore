@@ -1,0 +1,6 @@
+__pycache__/
+build/
+dist/
+*.spec
+*.pyc
+seasense_log_*.txt
