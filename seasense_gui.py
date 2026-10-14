@@ -180,7 +180,10 @@ class SerialWorker(threading.Thread):
                 buffer += self.port.read(waiting)
                 last_byte_time = now
             else:
-                only_echo = self.strip_echo and buffer == sent
+                # Keep waiting if all we have is our own echo, or only the
+                # light's "!" + LF prefix (the real reply may still follow).
+                rest = buffer[len(sent):] if self.strip_echo and buffer.startswith(sent) else buffer
+                only_echo = rest == b"" or rest == sp.LIGHT_PREFIX
                 if buffer and not only_echo and now - last_byte_time >= QUIET_GAP:
                     return buffer                    # reply complete
                 if (not buffer or only_echo) and now - start >= first_timeout:
@@ -1042,7 +1045,13 @@ class App(tk.Tk):
 
             # Bus scan: only report the addresses that answered
             if request.get("scan"):
-                if reply.strip():
+                # A light answers "addr?" with its own address, e.g.
+                # "!<LF>001<CR><LF>".  Only count it when that matches the
+                # address we asked.  A bare "!<LF>" (every light sends that
+                # for every command) or a late reply meant for a different
+                # address does not count.
+                answer = sp.reply_text(reply)
+                if answer.isdigit() and int(answer) == int(request["scan"]):
                     self.found_addresses.append(request["scan"])
                     self.log_note("Found a light at address %s" % request["scan"])
                 if request.get("last_scan"):

@@ -225,30 +225,45 @@ def expects_reply(address):
     return not (number == 0 or 301 <= number <= 332)
 
 
+# Real LSL-1000 lights (firmware 1.4.x) send "!" + LF as soon as they see
+# ANY command start on the bus - even one addressed to a different light.
+# The addressed light then continues with its actual reply, e.g.
+#     addressed light:  b"!\n100\r\n"     (data)   b"!\n\r\n"  (ACK)
+#     any other light:  b"!\n"            (nothing more - NOT an answer)
+# The spec does not mention this prefix.
+LIGHT_PREFIX = b"!\n"
+
+
+def reply_body(reply):
+    """Return the reply bytes with the light's "!" + LF prefix removed."""
+    if reply.startswith(LIGHT_PREFIX):
+        return reply[len(LIGHT_PREFIX):]
+    if reply == b"!":                 # prefix arrived without its LF
+        return b""
+    return reply
+
+
+def has_answer(reply):
+    """True if a light actually answered (not just the "!" + LF prefix)."""
+    return reply_body(reply) != b""
+
+
 def reply_text(reply):
-    """Return the useful part of a reply as text.
+    """Return the useful part of a reply as text, prefix and surrounding
+    CR/LF removed.  Tabs and line breaks INSIDE multi-line replies (STAT,
+    PSET) are kept.
 
-    Real LSL-1000 lights (firmware 1.4.x) start every reply with "!" and a
-    line feed, e.g. b"!\\n1,100,10,15,50,99,4.00\\r\\n", which the spec does
-    not show.  This removes that leading "!" and any CR/LF/space around the
-    data, so the rest of the program sees just "1,100,10,15,50,99,4.00".
-    Tabs and line breaks INSIDE multi-line replies (STAT, PSET) are kept.
-
-        reply_text(b"!\\n100\\r\\n")  ->  "100"
-        reply_text(b"!\\n\\r\\n")     ->  ""      (ACK)
-        reply_text(b"!\\n?\\r\\n")    ->  "?"     (NAK)
+        reply_text(b"!\n100\r\n")  ->  "100"
+        reply_text(b"!\n\r\n")     ->  ""      (ACK)
+        reply_text(b"!\n?\r\n")    ->  "?"     (NAK)
     """
-    text = reply.decode("ascii", errors="replace")
-    text = text.strip("\r\n ")
-    if text.startswith("!"):
-        text = text[1:]
-    return text.strip("\r\n ")
+    return reply_body(reply).decode("ascii", errors="replace").strip("\r\n ")
 
 
 def is_ack(reply):
-    """True if the reply is a plain ACK (just the end-of-frame, possibly
-    with the light's leading "!")."""
-    return bool(reply) and reply_text(reply) == ""
+    """True if the reply is a plain ACK: an end-of-frame after the prefix.
+    A bare "!" + LF prefix is NOT an ACK - nobody answered."""
+    return has_answer(reply) and reply_text(reply) == ""
 
 
 def strip_echo(sent, received):
@@ -360,9 +375,12 @@ def parse_reply(command, access, reply, reply_expected=True):
 
     The first pair is always ("Result", "ACK" / "NAK" / "DATA" / ...).
     """
-    if not reply:
+    if not has_answer(reply):          # nothing, or only the "!" + LF prefix
         if not reply_expected:
             return [("Result", "No reply (normal for broadcast / group address)")]
+        if reply:
+            return [("Result", "NO REPLY - only the bus prefix !<LF> came back, "
+                               "so no light has this address")]
         return [("Result", "NO REPLY - check port, baud, address, wiring "
                            "(the light also stays silent on a bad checksum)")]
 

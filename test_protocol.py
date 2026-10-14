@@ -155,6 +155,17 @@ class ReplyTests(unittest.TestCase):
         self.assertEqual(stat["Temp3"], "24.5C")
         self.assertEqual(stat["FLAGS"], "0x0000")
 
+    def test_prefix_only_is_not_an_answer(self):
+        """Every light sends "!" + LF for every command, even one addressed
+        to another node.  That alone must not count as a reply or an ACK."""
+        from seasense_protocol import has_answer, is_ack
+        self.assertFalse(has_answer(b"!\n"))
+        self.assertFalse(is_ack(b"!\n"))
+        self.assertTrue(has_answer(b"!\n001\r\n"))
+        self.assertTrue(is_ack(b"!\n\r\n"))
+        self.assertIn("NO REPLY", parse_reply("chsw", "?", b"!\n")[0][1])
+        self.assertIn("no light has this address", parse_reply("chsw", "?", b"!\n")[0][1])
+
     def test_curve_model(self):
         from seasense_protocol import curve_output
         # Linear curve from the spec: output follows input

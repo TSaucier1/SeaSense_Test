@@ -75,7 +75,9 @@ switches the COM port to the new rate automatically once the light ACKs.
 - Four checksum examples in Rev C are misprinted. Correct values:
   `!010:stat?*11`, `!010:curv?*15`, `!005:chsw+*FA`, `!010:rset=4a93*12`.
 - Real LSL-1000 lights (firmware 1.4.x) start every reply with `!<LF>`, which the spec
-  does not show. The app strips it before decoding.
+  does not show. The app strips it before decoding. Every light also sends that `!<LF>` for
+  commands addressed to *other* nodes, so a bare `!<LF>` means "no light at this address".
+  The bus scan counts a light only when `addr?` comes back with that same address.
 - The spec shows `lout?` and `chsw?` replies ending in `<CR>` only; the app
   treats a reply as finished after 50 ms of silence, so any ending works.
 - The dimming-curve graph is an **approximation** fitted to the spec's
