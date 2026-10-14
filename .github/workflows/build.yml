@@ -1,4 +1,4 @@
-# Builds SeaSenseTester.exe on a Windows machine in GitHub's cloud and
+# Builds SeaSenseTester_v1.0.N.exe on a Windows machine in GitHub's cloud and
 # publishes it as a GitHub Release (Releases panel on the repo's main page).
 #
 # - Every push to main: tests run, the .exe is built, and a new Release
@@ -32,27 +32,36 @@ jobs:
       - name: Run protocol unit tests
         run: python -m unittest test_protocol.py -v
 
+      # Version number for this build, e.g. 1.0.5.  Used in the window
+      # title, the .exe file name and the Release name so they always match.
+      - name: Set version
+        shell: bash
+        run: |
+          echo "VERSION=1.0.${{ github.run_number }}" >> "$GITHUB_ENV"
+          sed -i "s/^APP_VERSION = .*/APP_VERSION = \"1.0.${{ github.run_number }}\"/" seasense_gui.py
+          grep "^APP_VERSION" seasense_gui.py
+
       - name: Build single-file exe
-        run: pyinstaller --onefile --windowed --name SeaSenseTester seasense_gui.py
+        run: pyinstaller --onefile --windowed --name SeaSenseTester_v${{ env.VERSION }} seasense_gui.py
 
       - name: Upload exe as build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SeaSenseTester-windows
-          path: dist/SeaSenseTester.exe
+          name: SeaSenseTester_v${{ env.VERSION }}
+          path: dist/SeaSenseTester_v${{ env.VERSION }}.exe
 
       # Creates the tag v1.0.N on this commit and a Release with the .exe.
       # (Tags made by this built-in token do not re-trigger the workflow.)
       - name: Publish Release with the exe
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: SeaSense Tester v1.0.${{ github.run_number }}
+          tag_name: v${{ env.VERSION }}
+          name: SeaSense Tester v${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           body: |
-            Download **SeaSenseTester.exe** below and run it (no install needed).
+            Download **SeaSenseTester_v${{ env.VERSION }}.exe** below and run it (no install needed).
             Windows may show a SmartScreen warning for an unsigned app: More info -> Run anyway.
 
             Built from commit ${{ github.sha }}.
           make_latest: true
-          files: dist/SeaSenseTester.exe
+          files: dist/SeaSenseTester_v${{ env.VERSION }}.exe

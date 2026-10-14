@@ -10,8 +10,8 @@ SeaSense serial protocol (792-004-013-0A-01 Rev C).
 The Windows build is made automatically by GitHub Actions; no Python install needed.
 Every push to `main` publishes a new release with the .exe attached.
 
-- **Releases** (right side of the repo page) → latest release → download `SeaSenseTester.exe`.
-- Or **Actions** tab → latest "Build Windows exe" run → **Artifacts** → `SeaSenseTester-windows` (zip).
+- **Releases** (right side of the repo page) → latest release → download `SeaSenseTester_v1.0.N.exe`.
+- Or **Actions** tab → latest "Build Windows exe" run → **Artifacts** → `SeaSenseTester_v1.0.N` (zip).
 
 Windows SmartScreen may warn about an unsigned app the first time: *More info → Run anyway*.
 

@@ -36,7 +36,7 @@ import serial.tools.list_ports
 import seasense_protocol as sp
 
 APP_TITLE = "SeaSense Light Tester"
-APP_VERSION = "1.0"
+APP_VERSION = "1.0-dev"   # replaced with the release number (e.g. 1.0.5) by the GitHub build
 
 # --------------------------------------------------------------------------
 # 1. Settings
