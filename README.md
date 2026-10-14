@@ -107,6 +107,22 @@ The Setup tab does this for you: click *Fill from light (INFO)*, change the
 dimming option, then *Write FSET + FTEN + SAVE*. It sends these without a
 checksum (as tested) and stops if any step is refused.
 
+### Serial port type (FPRT) - from DeepSea support
+
+A light can default to RS-232 and then never answers on RS-485. Over the USB
+programming port, send:
+
+```
+!001:FPRT=RS4,1
+```
+
+```
+!001:SAVE
+```
+
+`RS4` = RS-485, `1` = 9600 baud (the BAUD codes: 1 = 9600, 2 = 19200, 3 = 57600).
+Power-cycle the light afterwards. The Setup tab has a button for this too.
+
 ## Running from source / building locally
 
 Needs Python 3.8+ on Windows.

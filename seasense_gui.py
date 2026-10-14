@@ -634,7 +634,7 @@ class App(tk.Tk):
         # FSET / FTEN / SAVE are NOT in the SeaSense spec (Rev C).  The
         # sequence below was found on the bench with an LSL-1000, FW 1.4.1001,
         # and changed its INFO dimming option from PV to SER.
-        box = ttk.LabelFrame(tab, text="Factory configuration (FSET - not in spec)", padding=8)
+        box = ttk.LabelFrame(tab, text="Factory configuration (FSET / FPRT - not in spec)", padding=8)
         box.pack(fill=tk.X)
         self.fset_serial_var = tk.StringVar()
         self.fset_dimming_var = tk.StringVar(value="SER")
@@ -660,6 +660,26 @@ class App(tk.Tk):
             "stopping if any step is refused, then reads INFO to confirm. "
             "Fields fill in automatically whenever INFO is read.")).grid(
             row=3, column=0, columnspan=4, sticky="w", pady=(4, 0))
+
+        # FPRT selects the light's serial port type and baud.  From DeepSea
+        # support: "!001:FPRT=RS4,1" then "!001:SAVE" sets RS-485 at 9600.
+        # The light may default to RS-232 (RS2), and then never answers on 485.
+        ttk.Separator(box).grid(row=4, column=0, columnspan=4, sticky="ew", pady=6)
+        ttk.Label(box, text="Port").grid(row=5, column=0, sticky="w", padx=2)
+        ttk.Label(box, text="Baud").grid(row=5, column=1, sticky="w", padx=2)
+        self.fprt_port_var = tk.StringVar(value="RS4 = RS-485")
+        self.fprt_baud_var = tk.StringVar(value="1 = 9600")
+        ttk.Combobox(box, textvariable=self.fprt_port_var, state="readonly", width=14,
+                     values=["RS4 = RS-485", "RS2 = RS-232 (untested)"]).grid(row=6, column=0, sticky="w", padx=2)
+        ttk.Combobox(box, textvariable=self.fprt_baud_var, state="readonly", width=9,
+                     values=["%d = %d" % (code, rate) for code, rate in sp.BAUD_CODES.items()]).grid(
+            row=6, column=1, sticky="w", padx=2)
+        ttk.Button(box, text="Write FPRT + SAVE...", command=self.factory_port).grid(
+            row=6, column=2, columnspan=2, sticky="w", padx=2)
+        ttk.Label(box, foreground="gray", wraplength=440, justify=tk.LEFT, text=(
+            "Sets which serial port the light answers on (send over the USB "
+            "programming port). Power-cycle the light afterwards.")).grid(
+            row=7, column=0, columnspan=4, sticky="w", pady=(4, 0))
 
     # ---- Optional features tab ------------------------------------------
     def _tab_options(self, tab):
@@ -1049,6 +1069,38 @@ class App(tk.Tk):
 
         # Sent without checksum, exactly as verified on the bench
         self.send("fset", "=", data, address=address, checksum=False, on_reply=step("FSET", send_ften))
+
+    def factory_port(self):
+        """Set the light's serial port type and baud: FPRT, then SAVE."""
+        address = self.get_address()
+        if address is None or not sp.expects_reply(address):
+            messagebox.showwarning(APP_TITLE, "Port configuration needs a single light's address.")
+            return
+        port = self.fprt_port_var.get().split()[0]          # "RS4"
+        baud_code = self.fprt_baud_var.get().split()[0]     # "1"
+        data = "%s,%s" % (port, baud_code)
+        if not messagebox.askyesno(APP_TITLE, (
+                "Write port configuration to light %s?\n\nFPRT=%s\nSAVE\n\n"
+                "The light will then answer on %s at %s baud (after a power cycle).")
+                % (address, data, self.fprt_port_var.get().split("= ")[1],
+                   sp.BAUD_CODES[int(baud_code)]), icon="warning"):
+            return
+
+        def after_fprt(reply):
+            if sp.is_ack(reply):
+                self.send("save", address=address, checksum=False, on_reply=after_save)
+            else:
+                self.log_line("ERROR", "FPRT not accepted - SAVE not sent", "error")
+
+        def after_save(reply):
+            if sp.has_answer(reply) and sp.reply_text(reply) != "?":
+                self.log_note("Port settings saved - power-cycle the light, then "
+                              "connect on the new port at the new baud")
+            else:
+                self.log_line("ERROR", "SAVE not accepted", "error")
+
+        # Sent without checksum, exactly as DeepSea gave it
+        self.send("fprt", "=", data, address=address, checksum=False, on_reply=after_fprt)
 
     def factory_reset(self):
         address = self.get_address()
