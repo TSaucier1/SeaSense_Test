@@ -131,6 +131,30 @@ class ReplyTests(unittest.TestCase):
         pairs = parse_reply("curv", "?", b"1,100,1,5,70,95,4.5\r\n")
         self.assertEqual(pairs[-1], ("e (exponent)", "4.5"))
 
+    def test_real_light_replies(self):
+        """Replies captured from a real LSL-1000 (FW 1.4.1001): every reply
+        starts with "!" + LF, which the spec does not show."""
+        from seasense_protocol import reply_text, is_ack
+        self.assertEqual(reply_text(b"!\n1,100,10,15,50,99,4.00\r\n"), "1,100,10,15,50,99,4.00")
+        self.assertTrue(is_ack(b"!\n\r\n"))
+        self.assertTrue(is_ack(b"\r\n"))
+        self.assertFalse(is_ack(b""))
+        self.assertIn("NAK", parse_reply("lout", "=", b"!\n?\r\n")[0][1])
+        self.assertIn("ACK", parse_reply("lout", "=", b"!\n\r\n")[0][1])
+        self.assertEqual(parse_reply("curv", "?", b"!\n1,100,10,15,50,99,4.00\r\n")[1], ("YMIN (%)", "1"))
+        self.assertEqual(parse_reply("lout", "?", b"!\n100\r\n")[1], ("Light output", "100 %"))
+        self.assertEqual(parse_reply("temp", "?", b"!\n26.92\r\n")[1], ("Internal temperature", "26.92 \u00b0C"))
+        info = dict(parse_reply("info", "?", b"!\n001,LSL-1000,12-049-05581,0A,1.4.1001,DW00,FLD,PV,CH1+2\r\n"))
+        self.assertEqual(info["Address"], "001")
+        self.assertEqual(info["Serial number"], "12-049-05581")
+        self.assertTrue(info["Dimming control"].startswith("PV ="))
+        self.assertTrue(info["Output channels"].startswith("CH1+2"))
+        stat = dict(parse_reply("stat", "?", b"!\nRunTime\tPrCycle\tMaxTemp\tTemp1\tTemp2\tTemp3\tHumid\tFLAGS\r\n"
+                                              b"32.6hr\t148\t103.5C\t26.9C\t25.0C\t24.5C\t54%\t0x0000\r\n"))
+        self.assertEqual(stat["RunTime"], "32.6hr")
+        self.assertEqual(stat["Temp3"], "24.5C")
+        self.assertEqual(stat["FLAGS"], "0x0000")
+
     def test_curve_model(self):
         from seasense_protocol import curve_output
         # Linear curve from the spec: output follows input

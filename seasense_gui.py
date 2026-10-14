@@ -152,7 +152,7 @@ class SerialWorker(threading.Thread):
         # Baud rate change: the light ACKs at the OLD rate, then switches.
         # (Broadcast/group commands get no ACK, so switch anyway for those.)
         new_baud = request.get("new_baud")
-        if new_baud and (reply == sp.EOF or not request.get("reply_expected", True)):
+        if new_baud and (sp.is_ack(reply) or not request.get("reply_expected", True)):
             time.sleep(0.1)
             self.port.baudrate = new_baud
             self.events.put(("baud", new_baud))
@@ -929,7 +929,7 @@ class App(tk.Tk):
 
     def curve_read(self, reply):
         """Callback after 'Read': put the 7 values into the boxes."""
-        text = reply.decode("ascii", errors="replace").strip()
+        text = sp.reply_text(reply)
         if text.count(",") == 6:
             self.fill_curve(text)
 
@@ -957,7 +957,7 @@ class App(tk.Tk):
             self.send("addr", "=", new, on_reply=lambda reply: self.address_changed(reply, new))
 
     def address_changed(self, reply, new):
-        if reply == sp.EOF:    # ACK
+        if sp.is_ack(reply):
             self.address_var.set(new)
             self.log_note("Address box switched to %s" % new)
 
@@ -984,7 +984,7 @@ class App(tk.Tk):
         def send_key(reply):
             """Runs in the worker right after 'rset?' so no other command can
             sneak in between (which would cancel the reset)."""
-            key = reply.decode("ascii", errors="replace").strip()
+            key = sp.reply_text(reply)
             if len(key) == 4 and key.isalnum():
                 return sp.build_command(address, "rset", "=", key, use_checksum)
             return None

@@ -225,6 +225,32 @@ def expects_reply(address):
     return not (number == 0 or 301 <= number <= 332)
 
 
+def reply_text(reply):
+    """Return the useful part of a reply as text.
+
+    Real LSL-1000 lights (firmware 1.4.x) start every reply with "!" and a
+    line feed, e.g. b"!\\n1,100,10,15,50,99,4.00\\r\\n", which the spec does
+    not show.  This removes that leading "!" and any CR/LF/space around the
+    data, so the rest of the program sees just "1,100,10,15,50,99,4.00".
+    Tabs and line breaks INSIDE multi-line replies (STAT, PSET) are kept.
+
+        reply_text(b"!\\n100\\r\\n")  ->  "100"
+        reply_text(b"!\\n\\r\\n")     ->  ""      (ACK)
+        reply_text(b"!\\n?\\r\\n")    ->  "?"     (NAK)
+    """
+    text = reply.decode("ascii", errors="replace")
+    text = text.strip("\r\n ")
+    if text.startswith("!"):
+        text = text[1:]
+    return text.strip("\r\n ")
+
+
+def is_ack(reply):
+    """True if the reply is a plain ACK (just the end-of-frame, possibly
+    with the light's leading "!")."""
+    return bool(reply) and reply_text(reply) == ""
+
+
 def strip_echo(sent, received):
     """Some USB RS-485 adapters echo our own transmission back to us.
     If the received bytes start with exactly what we sent, remove it.
@@ -340,8 +366,8 @@ def parse_reply(command, access, reply, reply_expected=True):
         return [("Result", "NO REPLY - check port, baud, address, wiring "
                            "(the light also stays silent on a bad checksum)")]
 
-    text = reply.decode("ascii", errors="replace")
-    stripped = text.strip("\r\n")
+    # Drop the light's leading "!" and surrounding line breaks
+    text = stripped = reply_text(reply)
 
     if stripped == "":
         return [("Result", "ACK (command accepted)")]
@@ -390,7 +416,11 @@ def parse_reply(command, access, reply, reply_expected=True):
             elif is_light and number == 2:
                 pairs.append(("Beam pattern", "%s = %s" % (option, BEAM_PATTERNS.get(option.upper(), "?"))))
             elif is_light and number == 3:
-                pairs.append(("Dimming control", "%s = %s" % (option, DIMMING_CONTROLS.get(option.upper(), "?"))))
+                pairs.append(("Dimming control", "%s = %s" % (option, DIMMING_CONTROLS.get(
+                    option.upper(), "not listed in spec Rev C"))))
+            elif is_light and option.upper().startswith("CH"):
+                pairs.append(("Output channels", option + (" = dual output (CHSW works)"
+                                                           if "+" in option else "")))
             else:
                 pairs.append(("Option %d" % number, option))
 
