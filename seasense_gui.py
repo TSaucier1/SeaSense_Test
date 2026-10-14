@@ -24,6 +24,7 @@ it only puts messages on a queue that the GUI reads.
 Requires:  Python 3.8+ and pyserial  (pip install pyserial)
 """
 
+import os
 import queue
 import threading
 import time
@@ -121,13 +122,22 @@ class SerialWorker(threading.Thread):
             finally:
                 self.busy = False
 
-        try:
-            self.port.close()
-        except Exception:
-            pass
+        self.close_port()
 
     def stop(self):
+        """Ask the thread to finish.  It drops any queued commands, gives up
+        on a reply it is waiting for, and closes the port."""
         self.running = False
+        self.clear_pending()
+
+    def close_port(self):
+        """Close the serial port so Windows releases it right away.
+        Safe to call more than once, and from the GUI thread."""
+        try:
+            if self.port.is_open:
+                self.port.close()
+        except Exception:
+            pass
 
     def clear_pending(self):
         """Throw away any commands that have not been sent yet."""
@@ -188,8 +198,8 @@ class SerialWorker(threading.Thread):
                     return buffer                    # reply complete
                 if (not buffer or only_echo) and now - start >= first_timeout:
                     return buffer                    # no reply
-            if now - start >= MAX_REPLY_TIME:
-                return buffer                        # safety limit
+            if now - start >= MAX_REPLY_TIME or not self.running:
+                return buffer                        # safety limit / closing
             time.sleep(0.002)
 
     def _read_unsolicited(self):
@@ -816,9 +826,11 @@ class App(tk.Tk):
         self.log_note("Opened %s at %d baud, 8N1" % (port_name, baud))
 
     def disconnect(self):
+        """Stop the worker thread and make sure the COM port is released."""
         if self.worker:
             self.worker.stop()
-            self.worker.join(timeout=1)
+            self.worker.join(timeout=1)    # it stops within ~0.05 s normally
+            self.worker.close_port()       # close it ourselves, just in case
             self.worker = None
             self.log_note("Port closed")
         self.scanning = False
@@ -838,8 +850,11 @@ class App(tk.Tk):
             self.log_note("Pending commands cleared")
 
     def on_close(self):
-        self.disconnect()
-        self.destroy()
+        """Window X button: release the COM port, then close the window."""
+        try:
+            self.disconnect()
+        finally:
+            self.destroy()
 
     # ======================================================================
     # Sending commands
@@ -1285,4 +1300,14 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    app = App()
+    try:
+        app.mainloop()
+    finally:
+        # Belt and braces: release the port even if the window was closed in
+        # an unusual way, then end the process immediately so nothing (such
+        # as a background thread) can keep the COM port open.
+        if app.worker:
+            app.worker.stop()
+            app.worker.close_port()
+        os._exit(0)
