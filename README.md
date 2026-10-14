@@ -41,7 +41,7 @@ no flow control. Lights ship at 9600 baud. If nothing answers, try swapping A an
 | Status | INFO, STAT, temperature, humidity, decoded summary, optional auto-poll |
 | Presets | Save / recall / clear presets 1–16, power-on boot preset |
 | Dimming curve | Drag A, B, C, D and YMIN/YMAX on a graph, then **Send curve** |
-| Setup | Change node address, group membership, light baud rate, factory reset |
+| Setup | Change node address, group membership, light baud rate, factory reset, factory configuration (FSET) |
 | Dual / Strobe | CHSW and PMOD/PEDG/PINV/PLEN (lights with those options only; others NAK) |
 
 **Slider:** sends `!ADR:lout=N` once the slider has been still for the
@@ -84,6 +84,28 @@ switches the COM port to the new rate automatically once the light ACKs.
   Figure 2 (the spec gives no formula): flat at YMIN from A to B, straight line
   from B to C, power curve `YMIN + (YMAX-YMIN)·(x/D)^e` from C to D, flat at YMAX
   after D. Serial dimming only uses B..D (LOUT 1 = B, LOUT 100 = D).
+
+## Factory configuration (FSET) - not in the spec
+
+Found on the bench with an LSL-1000 (FW 1.4.1001): this sequence changed the
+INFO dimming option from `PV` to `SER`. Note FSET's field order differs from INFO.
+
+```
+!001:FSET=<serial>,<dimming>,<color>,<beam>
+```
+
+```
+!001:FTEN=1
+```
+
+```
+!001:SAVE
+```
+
+Each of the first two answers with an ACK; SAVE answers `System settings written`.
+The Setup tab does this for you: click *Fill from light (INFO)*, change the
+dimming option, then *Write FSET + FTEN + SAVE*. It sends these without a
+checksum (as tested) and stops if any step is refused.
 
 ## Running from source / building locally
 

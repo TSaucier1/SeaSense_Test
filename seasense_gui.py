@@ -631,6 +631,36 @@ class App(tk.Tk):
             "presets. The app reads the one-time key and sends it back.")).pack(anchor="w")
         ttk.Button(box, text="Factory reset this light...", command=self.factory_reset).pack(anchor="w", pady=4)
 
+        # FSET / FTEN / SAVE are NOT in the SeaSense spec (Rev C).  The
+        # sequence below was found on the bench with an LSL-1000, FW 1.4.1001,
+        # and changed its INFO dimming option from PV to SER.
+        box = ttk.LabelFrame(tab, text="Factory configuration (FSET - not in spec)", padding=8)
+        box.pack(fill=tk.X)
+        self.fset_serial_var = tk.StringVar()
+        self.fset_dimming_var = tk.StringVar(value="SER")
+        self.fset_color_var = tk.StringVar()
+        self.fset_beam_var = tk.StringVar()
+        fields = [("Serial #", self.fset_serial_var, 16, None),
+                  ("Dimming", self.fset_dimming_var, 6, ["SER", "PV", "A05", "A10", "A20"]),
+                  ("Color", self.fset_color_var, 7, list(sp.LED_COLORS)),
+                  ("Beam", self.fset_beam_var, 7, list(sp.BEAM_PATTERNS))]
+        for column, (label, var, width, choices) in enumerate(fields):
+            ttk.Label(box, text=label).grid(row=0, column=column, sticky="w", padx=2)
+            if choices:
+                ttk.Combobox(box, textvariable=var, values=choices, width=width).grid(
+                    row=1, column=column, sticky="w", padx=2)
+            else:
+                ttk.Entry(box, textvariable=var, width=width).grid(row=1, column=column, sticky="w", padx=2)
+        row = ttk.Frame(box)
+        row.grid(row=2, column=0, columnspan=4, sticky="w", pady=(6, 0))
+        ttk.Button(row, text="Fill from light (INFO)", command=lambda: self.send("info", "?")).pack(side=tk.LEFT, padx=1)
+        ttk.Button(row, text="Write FSET + FTEN + SAVE...", command=self.factory_config).pack(side=tk.LEFT, padx=1)
+        ttk.Label(box, foreground="gray", wraplength=440, justify=tk.LEFT, text=(
+            "Sends !ADR:FSET=serial,dimming,color,beam  then  FTEN=1  then  SAVE, "
+            "stopping if any step is refused, then reads INFO to confirm. "
+            "Fields fill in automatically whenever INFO is read.")).grid(
+            row=3, column=0, columnspan=4, sticky="w", pady=(4, 0))
+
     # ---- Optional features tab ------------------------------------------
     def _tab_options(self, tab):
         ttk.Label(tab, foreground="gray", wraplength=450, justify=tk.LEFT, text=(
@@ -812,15 +842,17 @@ class App(tk.Tk):
         self.worker.requests.put(make_request(data, **extra))
         return True
 
-    def send(self, command, access="", data="", address=None, **extra):
+    def send(self, command, access="", data="", address=None, checksum=None, **extra):
         """Build a command for the current node address and queue it.
 
         Example: self.send("lout", "=", 50)  ->  !001:lout=50*xx<CR><LF>
+        checksum=None follows the checkbox; True/False forces it on/off.
         """
         address = address or self.get_address()
         if address is None:
             return False
-        raw = sp.build_command(address, command, access, data, self.checksum_var.get())
+        use_checksum = self.checksum_var.get() if checksum is None else checksum
+        raw = sp.build_command(address, command, access, data, use_checksum)
         # Spec 3.5: commands are limited to 31 characters.  A full dimming
         # curve plus "*XX" is 32, so drop the (optional) checksum if needed.
         if len(raw) - len(sp.EOF) > sp.MAX_COMMAND_LENGTH:
@@ -973,6 +1005,51 @@ class App(tk.Tk):
                 "will switch the COM port to %d automatically.") % (address, new_baud, new_baud)):
             self.send("baud", "=", code, new_baud=new_baud)
 
+    def factory_config(self):
+        """Write the factory INFO fields: FSET, then FTEN=1, then SAVE.
+        Each step is only sent after the previous one is ACKed."""
+        address = self.get_address()
+        if address is None or not sp.expects_reply(address):
+            messagebox.showwarning(APP_TITLE, "Factory configuration needs a single light's address.")
+            return
+        values = [var.get().strip() for var in (self.fset_serial_var, self.fset_dimming_var,
+                                                 self.fset_color_var, self.fset_beam_var)]
+        if not all(values):
+            messagebox.showwarning(APP_TITLE, "Fill in all four fields (or click Fill from light).")
+            return
+        data = ",".join(values)
+        if not messagebox.askyesno(APP_TITLE, (
+                "Write factory configuration to light %s?\n\n"
+                "FSET=%s\nFTEN=1\nSAVE\n\n"
+                "These commands are not in the SeaSense spec. Check the serial "
+                "number, color and beam match the light's label.") % (address, data),
+                icon="warning"):
+            return
+
+        def step(name, next_step):
+            """Return a reply handler: continue only if the light ACKed
+            (SAVE answers with text, so any non-NAK answer counts there)."""
+            def handler(reply):
+                text = sp.reply_text(reply)
+                ok = sp.is_ack(reply) or (name == "SAVE" and sp.has_answer(reply) and text != "?")
+                if ok:
+                    next_step()
+                else:
+                    self.log_line("ERROR", "%s not accepted - sequence stopped" % name, "error")
+            return handler
+
+        def send_info():
+            self.send("info", "?")
+
+        def send_save():
+            self.send("save", address=address, checksum=False, on_reply=step("SAVE", send_info))
+
+        def send_ften():
+            self.send("ften", "=", 1, address=address, checksum=False, on_reply=step("FTEN", send_save))
+
+        # Sent without checksum, exactly as verified on the bench
+        self.send("fset", "=", data, address=address, checksum=False, on_reply=step("FSET", send_ften))
+
     def factory_reset(self):
         address = self.get_address()
         if address is None or not sp.expects_reply(address):
@@ -1089,6 +1166,14 @@ class App(tk.Tk):
         for label, value in pairs:
             if label in self.summary:
                 self.summary[label].config(text=value)
+        if command == "info":
+            # Keep the factory-configuration boxes in step with the light.
+            # Values look like "DW00 = Daylight White", so keep the code only.
+            targets = {"Serial number": self.fset_serial_var, "Dimming control": self.fset_dimming_var,
+                       "LED color": self.fset_color_var, "Beam pattern": self.fset_beam_var}
+            for label, value in pairs:
+                if label in targets and value:
+                    targets[label].set(value.split()[0])
         if command == "lout":
             for label, value in pairs:
                 if label == "Light output":
