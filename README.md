@@ -15,6 +15,47 @@ Every push to `main` publishes a new release with the .exe attached.
 
 Windows SmartScreen may warn about an unsigned app the first time: *More info → Run anyway*.
 
+## Running on Linux
+
+The .exe is Windows-only, but the app runs on Linux from the source code
+(it was developed and tested on Linux).
+
+Install Python's Tk and serial support (Debian / Ubuntu / Raspberry Pi OS):
+
+```
+sudo apt install python3-tk python3-serial
+```
+
+Fedora:
+
+```
+sudo dnf install python3-tkinter python3-pyserial
+```
+
+Get the code, either *Source code (tar.gz)* from a release, or:
+
+```
+git clone https://github.com/TSaucier1/SeaSense_Test.git
+```
+
+```
+cd SeaSense_Test
+```
+
+Run it:
+
+```
+python3 seasense_gui.py
+```
+
+USB serial adapters show as `/dev/ttyUSB0` (or `/dev/ttyACM0`) in the COM port
+list. If Connect says "permission denied", add yourself to the `dialout` group
+once, then log out and back in:
+
+```
+sudo usermod -aG dialout $USER
+```
+
 ## Wiring (2-wire RS-485)
 
 | Adapter terminal | Light   |

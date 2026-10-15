@@ -59,8 +59,52 @@ jobs:
           name: SeaSense Tester v${{ env.VERSION }}
           target_commitish: ${{ github.sha }}
           body: |
-            Download **SeaSenseTester_v${{ env.VERSION }}.exe** below and run it (no install needed).
-            Windows may show a SmartScreen warning for an unsigned app: More info -> Run anyway.
+            ## Windows
+
+            Download **SeaSenseTester_v${{ env.VERSION }}.exe** below and double-click it. No install needed.
+            Windows may show a SmartScreen warning for an unsigned app: *More info -> Run anyway*.
+            If the download shows "Failed - No file", your antivirus removed it: check
+            *Windows Security -> Protection history* and restore / allow it.
+
+            ## Linux
+
+            The .exe is Windows-only, but the same app runs on Linux from the source code.
+
+            1. Install Python's Tk and serial support (Debian / Ubuntu / Raspberry Pi OS):
+
+            ```
+            sudo apt install python3-tk python3-serial
+            ```
+
+            (Fedora: `sudo dnf install python3-tkinter python3-pyserial`)
+
+            2. Download **Source code (tar.gz)** below, then extract it:
+
+            ```
+            tar xzf SeaSense_Test-${{ env.VERSION }}.tar.gz
+            ```
+
+            ```
+            cd SeaSense_Test-${{ env.VERSION }}
+            ```
+
+            3. Run it:
+
+            ```
+            python3 seasense_gui.py
+            ```
+
+            USB serial adapters appear as `/dev/ttyUSB0` (or `/dev/ttyACM0`) in the COM port list.
+            If Connect says "permission denied", add yourself to the `dialout` group once, then log out and back in:
+
+            ```
+            sudo usermod -aG dialout $USER
+            ```
+
+            ## Notes
+
+            - Serial settings: 8N1, no flow control, 9600 baud unless the light was changed.
+            - See the README on the repo's main page for wiring, every tab, and the FSET / FPRT setup commands.
 
             Built from commit ${{ github.sha }}.
           make_latest: true
