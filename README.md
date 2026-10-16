@@ -241,7 +241,9 @@ board (FW 1.4.1001). Confirm with `!001:FPRT?` and `!001:FTEN?`.
 
 **Verified end to end:** that replacement board arrived with a bare flash and was
 set up entirely from this app (FSET with serial number / SER / color / beam, then
-RS-485 + termination); INFO, FPRT? and FTEN? confirmed the result.
+RS-485 + termination); INFO, FPRT? and FTEN? confirmed the result. A second
+bare board was then set up the same way with the fixed sequence (v1.0.12 and
+later) and worked as expected, with no manual steps.
 
 ### Maximum output limit (FLMX)
 
