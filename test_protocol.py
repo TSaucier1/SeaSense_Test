@@ -164,7 +164,44 @@ class ReplyTests(unittest.TestCase):
         self.assertTrue(has_answer(b"!\n001\r\n"))
         self.assertTrue(is_ack(b"!\n\r\n"))
         self.assertIn("NO REPLY", parse_reply("chsw", "?", b"!\n")[0][1])
-        self.assertIn("no light has this address", parse_reply("chsw", "?", b"!\n")[0][1])
+        self.assertIn("no light at this address", parse_reply("chsw", "?", b"!\n")[0][1])
+
+    def test_probe_capture_fw_1_4_1006(self):
+        """Exact bytes captured with a probe script from an LSL-1000
+        (FW 1.4.1006, CH1+2) over its internal USB port, 2026-10-16.
+        Every reply arrived as one chunk, 1-16 ms after the command."""
+        from seasense_protocol import has_answer
+        info = dict(parse_reply("info", "?", b"!\n001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2\r\n"))
+        self.assertEqual(info["Firmware version"], "1.4.1006")
+        self.assertEqual(info["Dimming control"], "SER = Serial RS-232/485")
+        # STAT: 8 columns, no trailing blank line
+        stat = dict(parse_reply("stat", "?", b"!\nRunTime\tPrCycle\tMaxTemp\tTemp1\tTemp2\tTemp3\tHumid\tFLAGS\r\n"
+                                              b"1.1hr\t12\t102.3C\t24.9C\t22.2C\t21.2C\t29%\t0x0000\r\n"))
+        self.assertEqual(stat["Humid"], "29%")
+        self.assertEqual(len(stat), 9)              # Result + 8 columns
+        self.assertEqual(parse_reply("rhum", "?", b"!\n29.10\r\n")[1], ("Internal humidity", "29.10 %RH"))
+        self.assertEqual(parse_reply("curv", "?", b"!\n1,100,0,3,53,92,4.50\r\n")[-1], ("e (exponent)", "4.50"))
+        self.assertEqual(parse_reply("baud", "?", b"!\n1\r\n")[1], ("Baud rate", "1 = 9600 bps"))
+        self.assertEqual(parse_reply("addr", "?", b"!\n001\r\n")[1], ("Node address", "001"))
+        # BOOT: header row + one value row ending in a stray tab
+        boot = parse_reply("boot", "?", b"!\nPreset\tSTBY\tLOUT\r\n0:\t0\t1\t\r\n")
+        self.assertEqual(boot[1:], [("Boot preset", "0"), ("Preset 0", "STBY=0, LOUT=1")])
+        # PSET: STBY + LOUT only (no CHSW column), presets 1-16
+        pset = dict(parse_reply("pset", "?", b"!\nPreset\tSTBY\tLOUT\r\n1:\t0\t100\r\n16:\t0\t100\r\n"))
+        self.assertEqual(pset["Preset 16"], "STBY=0, LOUT=100")
+        # ADGR with no groups: empty line - that is empty DATA, not an ACK
+        adgr = parse_reply("adgr", "?", b"!\n\r\n")
+        self.assertEqual(adgr, [("Result", "DATA"), ("Group addresses", "(none)")])
+        self.assertIn("ACK", parse_reply("adgr", "+", b"!\n\r\n")[0][1])
+        # SAVE? and unknown commands: NAK
+        self.assertIn("NAK", parse_reply("save", "?", b"!\n?\r\n")[0][1])
+        self.assertIn("NAK", parse_reply("help", "?", b"!\n?\r\n")[0][1])
+        # CHSW? on a CH1+2 unit, wrong checksum, wrong address, broadcast:
+        # all just the prefix
+        self.assertFalse(has_answer(b"!\n"))
+        for command in ("chsw", "lout", "info"):
+            self.assertIn("NO REPLY", parse_reply(command, "?", b"!\n")[0][1])
+        self.assertIn("broadcast", parse_reply("stby", "?", b"!\n", reply_expected=False)[0][1])
 
     def test_factory_replies(self):
         """FPRT / FTEN / FLMX replies, codes from DeepSea's service guides."""

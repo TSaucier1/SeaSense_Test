@@ -749,7 +749,8 @@ class App(tk.Tk):
     def _tab_options(self, tab):
         ttk.Label(tab, foreground="gray", wraplength=450, justify=tk.LEFT, text=(
             "Only for lights built with these options. A standard single-"
-            "output LSL-1000 will answer NAK - that is normal.")).pack(anchor="w")
+            "output LSL-1000 will answer NAK - that is normal. A CH1+2 "
+            "LSL-1000 (FW 1.4.1006) does not answer CHSW? at all (only !<LF>).")).pack(anchor="w")
 
         box = ttk.LabelFrame(tab, text="Dual output channel (CHSW)", padding=8)
         box.pack(fill=tk.X, pady=6)

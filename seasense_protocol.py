@@ -231,6 +231,11 @@ def expects_reply(address):
 #     addressed light:  b"!\n100\r\n"     (data)   b"!\n\r\n"  (ACK)
 #     any other light:  b"!\n"            (nothing more - NOT an answer)
 # The spec does not mention this prefix.
+#
+# Captured over the internal USB port (FW 1.4.1006, one light only), a bare
+# b"!\n" also came back for: a wrong checksum, a broadcast read (!000:stby?)
+# and CHSW? on a CH1+2 unit at the right address.  So "!\n" alone means
+# "nobody answered", not necessarily "no light at this address".
 LIGHT_PREFIX = b"!\n"
 
 
@@ -375,11 +380,15 @@ SIMPLE_READS = {
 
 def _split_table(text):
     """Split a tab-delimited table reply into rows of trimmed cells,
-    ignoring blank lines."""
+    ignoring blank lines and trailing empty cells (BOOT? ends its value
+    row with a stray tab: b"0:\\t0\\t1\\t\\r\\n")."""
     rows = []
     for line in text.replace("\r", "\n").split("\n"):
         if line.strip():
-            rows.append([cell.strip() for cell in line.split("\t")])
+            cells = [cell.strip() for cell in line.split("\t")]
+            while cells and cells[-1] == "":
+                cells.pop()
+            rows.append(cells)
     return rows
 
 
@@ -398,8 +407,9 @@ def parse_reply(command, access, reply, reply_expected=True):
         if not reply_expected:
             return [("Result", "No reply (normal for broadcast / group address)")]
         if reply:
-            return [("Result", "NO REPLY - only the bus prefix !<LF> came back, "
-                               "so no light has this address")]
+            return [("Result", "NO REPLY - only the bus prefix !<LF> came back: "
+                               "no light at this address, a bad checksum, or the "
+                               "light ignores this command (e.g. CHSW? on FW 1.4.1006)")]
         return [("Result", "NO REPLY - check port, baud, address, wiring "
                            "(the light also stays silent on a bad checksum)")]
 
@@ -407,6 +417,12 @@ def parse_reply(command, access, reply, reply_expected=True):
     text = stripped = reply_text(reply)
 
     if stripped == "":
+        # An empty line after a READ is empty data, not an ACK.
+        # Real example: ADGR? with no groups answers b"!\n\r\n".
+        if access == "?":
+            if (command or "").lower() == "adgr":
+                return [("Result", "DATA"), ("Group addresses", "(none)")]
+            return [("Result", "DATA (empty)")]
         return [("Result", "ACK (command accepted)")]
     if stripped.strip() == "?":
         if (command or "").lower() == "fact" and access == "?":
