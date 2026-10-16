@@ -368,7 +368,7 @@ SIMPLE_READS = {
     "vtst": ("Video test pattern", {"0": "Off", "1": "On"}),
     # Factory commands from DeepSea's service guides (not in the spec)
     "ften": ("Termination resistor", {"0": "Off", "1": "On"}),
-    "flmx": ("Max output limit (FLMX)", " (10-100)"),
+    "flmx": ("Max output limit (FLMX)", " (1-100)"),
     "fact": ("Factory unlock code", ""),
 }
 

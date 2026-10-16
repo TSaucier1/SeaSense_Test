@@ -139,6 +139,21 @@ USB", "Setting an LSL-2000 for a Custom Configuration") and from DeepSea support
 The app's **Factory** tab runs each sequence for you, sends everything without a
 checksum (as the guides do), and stops if a step is refused.
 
+### LSL-1000 vs LSL-2000
+
+The SeaSense protocol is the same for both (the spec covers "LSL-10XX, LSL-20XX"),
+but they differ in power and in which guides apply:
+
+- **LSL-1000 is AC powered** (100-140 VAC). Its electronics can be referenced to
+  the mains: on our bench, plugging USB into a mains-powered LSL-1000 shut it down.
+  Only use its internal USB port with mains disconnected, or through a USB isolator.
+- **LSL-2000 / 2025 / 2050 / 2075 are DC powered** (10-48 VDC).
+- The FSET / FPRT / FTEN guide is written for the LSL-2000 driver board. FSET and
+  FPRT were confirmed on an LSL-1000 (FW 1.4.1001) on our bench and by DeepSea support.
+- FLMX has a separate chart for each model (below).
+- The LSL-2000 driver replacement kit (S11101) is for DC lights only. The endcap
+  kits (S11105, S11106) and the light engine guide cover both models.
+
 ### Two ways to connect
 
 - **External serial pins** on the bulkhead connector, through an RS-485 or RS-232
@@ -224,9 +239,14 @@ bus. Follow with `!001:SAVE`.
 !001:SAVE
 ```
 
-Range 10-100; `!001:FLMX?` reads it. DeepSea's LSL-1000 chart shows input power
-from about 27 W at 10 to roughly 135-170 W at 100, depending on line voltage
-(100-140 VAC). Their note: these are estimates, measure before relying on them.
+`!001:FLMX?` reads it. DeepSea's guide has one chart per model (input power,
+estimates - measure before relying on them):
+
+| Model | Power | FLMX range on chart | Input power |
+|---|---|---|---|
+| LSL-1000 | AC, 100-140 VAC | 10-100 | ~27 W at 10 to ~135-170 W at 100, rising with line voltage |
+| LSL-2000 | DC, 20-48 V supply | ~1-100 | ~1.2 W per step, ~117 W at 100 (measured max ~108 W) |
+| LSL-2000 | DC, 10-24 V supply | ~1-50 useful | capped near 60 W; settings above ~50 add nothing |
 
 ### Custom settings files
 

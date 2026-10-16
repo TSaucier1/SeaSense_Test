@@ -730,14 +730,16 @@ class App(tk.Tk):
         box = ttk.LabelFrame(tab, text="Maximum output limit (FLMX)", padding=8)
         box.pack(fill=tk.X)
         self.flmx_var = tk.StringVar(value="100")
-        ttk.Label(box, text="Limit (10-100)").pack(side=tk.LEFT)
-        ttk.Spinbox(box, textvariable=self.flmx_var, from_=10, to=100, width=5).pack(side=tk.LEFT, padx=4)
+        ttk.Label(box, text="Limit (1-100)").pack(side=tk.LEFT)
+        ttk.Spinbox(box, textvariable=self.flmx_var, from_=1, to=100, width=5).pack(side=tk.LEFT, padx=4)
         ttk.Button(box, text="Read", command=self.factory_read_flmx).pack(side=tk.LEFT, padx=1)
         ttk.Button(box, text="Write + SAVE...", command=self.factory_write_flmx).pack(side=tk.LEFT, padx=1)
         ttk.Label(tab, foreground="gray", wraplength=450, justify=tk.LEFT, text=(
-            "FLMX caps the light's power. DeepSea's LSL-1000 chart: about 27 W "
-            "at 10 up to about 135-170 W at 100 depending on line voltage "
-            "(100-140 VAC) - check actual draw before relying on it.")).pack(anchor="w", pady=(4, 0))
+            "FLMX caps the light's input power (DeepSea's charts, estimates):\n"
+            "LSL-1000 (AC): ~27 W at 10 up to ~135-170 W at 100 (100-140 VAC).\n"
+            "LSL-2000 (DC): ~1.2 W per step, ~117 W at 100 on 20-48 V. On a "
+            "10-24 V supply it tops out near 60 W, so settings above ~50 add "
+            "nothing.")).pack(anchor="w", pady=(4, 0))
 
     # ---- Optional features tab ------------------------------------------
     def _tab_options(self, tab):
@@ -1247,8 +1249,8 @@ class App(tk.Tk):
         if address is None:
             return
         value = self.flmx_var.get().strip()
-        if not value.isdigit() or not 10 <= int(value) <= 100:
-            messagebox.showwarning(APP_TITLE, "FLMX must be a whole number from 10 to 100.")
+        if not value.isdigit() or not 1 <= int(value) <= 100:
+            messagebox.showwarning(APP_TITLE, "FLMX must be a whole number from 1 to 100.")
             return
         if messagebox.askyesno(APP_TITLE, "Set light %s maximum output limit to %s?\n\n"
                                "FACT unlock\nFLMX=%s\nSAVE\nFLMX? to confirm" % (address, value, value)):
