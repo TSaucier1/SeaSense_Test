@@ -176,6 +176,10 @@ class ReplyTests(unittest.TestCase):
         self.assertEqual(info["LED color"], "DW90 = Daylight White 90 CRI")
         self.assertEqual(info["Dimming control"], "10V = Analog 0-10 V")
 
+    def test_fact_refusal_is_normal(self):
+        self.assertIn("No unlock needed", parse_reply("fact", "?", b"!\n?\r\n")[0][1])
+        self.assertIn("NAK", parse_reply("fprt", "?", b"!\n?\r\n")[0][1])
+
     def test_curve_model(self):
         from seasense_protocol import curve_output
         # Linear curve from the spec: output follows input

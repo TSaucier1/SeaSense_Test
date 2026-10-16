@@ -81,7 +81,7 @@ SER default to RS-232).
 | Tab | What it does |
 |-----|--------------|
 | Light | Output slider (0–100 in 1 % steps), quick levels, ±1 / ±coarse, standby |
-| Status | INFO, STAT, temperature, humidity, decoded summary, optional auto-poll |
+| Status | INFO, STAT, temperature, humidity, serial port + termination, decoded summary, optional auto-poll |
 | Presets | Save / recall / clear presets 1–16, power-on boot preset |
 | Dimming curve | Drag A, B, C, D and YMIN/YMAX on a graph, then **Send curve** |
 | Setup | Change node address, group membership, light baud rate, factory reset |
@@ -176,8 +176,12 @@ a one-time code, then send it straight back:
 !001:FACT=XXXX
 ```
 
-(`XXXX` = the 4 characters the light replied with.) The guides for the internal
-USB port do not use FACT. The app always unlocks first; it is harmless on USB.
+(`XXXX` = the 4 characters the light replied with.)
+
+**When FACT is needed:** over the external RS-232 / RS-485 pins, yes. Over the
+internal micro-USB port, no - there `FACT?` just answers `?` and factory commands
+work straight away (confirmed on an LSL-1000, FW 1.4.1001). The app sends `FACT?`
+first and only unlocks if the light gives a code, so it works either way.
 
 ### Unit configuration (FSET)
 
@@ -232,8 +236,7 @@ bus.
 **SAVE after FTEN / FPRT:** on our LSL-1000 (FW 1.4.1001, internal USB port) `SAVE`
 answered `?` after FTEN and after FPRT, yet both settings were kept - they store
 themselves. SAVE did succeed (`System settings written`) after FSET. Confirm
-with `!001:FPRT?` and `!001:FTEN?`. On that same port `FACT?` also answered `?`:
-no unlock was needed.
+with `!001:FPRT?` and `!001:FTEN?`.
 
 ### Maximum output limit (FLMX)
 

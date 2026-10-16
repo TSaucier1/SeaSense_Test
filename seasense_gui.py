@@ -547,7 +547,8 @@ class App(tk.Tk):
         items = ["Model", "Serial number", "Firmware version", "LED color",
                  "Beam pattern", "Dimming control", "Internal temperature",
                  "Internal humidity", "Light output", "Standby", "RunTime",
-                 "PrCycle", "MaxTemp", "Humid", "FLAGS"]
+                 "PrCycle", "MaxTemp", "Humid", "FLAGS",
+                 "Serial port", "Termination resistor"]
         for row_number, name in enumerate(items):
             ttk.Label(box, text=name + ":").grid(row=row_number, column=0, sticky="w")
             value = ttk.Label(box, text="-", foreground="#1a5fb4")
@@ -664,13 +665,16 @@ class App(tk.Tk):
     # Board", "Changing Serial Configurations", "Changing the Termination
     # Resistor Setting", "Update Maximum LED Output Settings over USB") and
     # from DeepSea support.  Every write first unlocks factory settings with
-    # FACT? / FACT=<code>, which the guides require on the external serial
-    # pins (the internal micro-USB port does not seem to need it, but it is
-    # harmless there).  All are sent without a checksum, as in the guides.
+    # FACT? / FACT=<code>, which is needed on the external RS-232 / RS-485
+    # pins.  Over the internal micro-USB port FACT? just answers "?" and no
+    # unlock is needed (confirmed on an LSL-1000), so the app only unlocks
+    # when the light offers a code.  All are sent without a checksum, as in
+    # the guides.
     def _tab_factory(self, tab):
         ttk.Label(tab, foreground="#a51d2d", wraplength=450, justify=tk.LEFT, text=(
             "Factory settings from DeepSea's service guides (not in the "
-            "protocol spec). Each write unlocks with FACT first.")).pack(anchor="w")
+            "protocol spec). Over RS-232 / RS-485 each command unlocks with "
+            "FACT first; over the internal USB port no unlock is needed.")).pack(anchor="w")
 
         # --- FSET: serial number, dimming type, LED color, beam pattern ---
         box = ttk.LabelFrame(tab, text="Unit configuration (FSET)", padding=8)
@@ -1049,6 +1053,14 @@ class App(tk.Tk):
     def read_all(self):
         for command in ("info", "stat", "temp", "rhum", "lout", "stby"):
             self.send(command, "?")
+        # Serial port (RS-485 / RS-232 + baud) and termination resistor.
+        # These are factory reads: over RS-232 / RS-485 the light wants a
+        # FACT unlock first, over the internal USB port it does not.
+        # run_factory_steps handles both.
+        address = self.get_address()
+        if address and sp.expects_reply(address):
+            self.run_factory_steps(address, [("fprt", "?", "", "any"),
+                                             ("ften", "?", "", "any")])
 
     def autopoll_tick(self):
         """Once a second: if auto-poll is on and its time is up, queue reads."""
@@ -1176,7 +1188,8 @@ class App(tk.Tk):
         def after_query(reply):
             key = sp.reply_text(reply)
             if not (len(key) == 4 and key.isalnum()):
-                self.log_note("Light did not ask for a FACT unlock - continuing")
+                self.log_note("Light did not ask for a FACT unlock - continuing "
+                              "(normal on the internal USB port)")
             run_next()
 
         self.send("fact", "?", address=address, checksum=False,
@@ -1430,7 +1443,7 @@ class App(tk.Tk):
         for label, value in pairs:
             tag = None
             if label == "Result":
-                tag = "ack" if value.startswith(("ACK", "DATA", "No reply (normal")) else "bad"
+                tag = "ack" if value.startswith(("ACK", "DATA", "No reply (normal", "No unlock needed")) else "bad"
             self.append(self.parsed_text, "    %-22s %s\n" % (label + ":", value), tag)
 
     @staticmethod

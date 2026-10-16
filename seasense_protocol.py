@@ -299,7 +299,7 @@ DIMMING_CONTROLS = {
     # Older codes printed in the spec's Appendix E
     "A05": "Analog 0-5 V", "A10": "Analog 0-10 V", "A20": "Analog 4-20 mA",
     # Seen on an AC-powered LSL-1000; not in any DeepSea document we have
-    "PV": "undocumented (seen on AC LSL-1000, likely phase dimming)",
+    "PV": "undocumented, likely phase dimming",
 }
 # Codes offered in the FSET "Dimming" box, in the service guide's order
 FSET_DIMMING_CODES = ["SER", "NON", "5V", "10V", "20I", "PV"]
@@ -409,6 +409,9 @@ def parse_reply(command, access, reply, reply_expected=True):
     if stripped == "":
         return [("Result", "ACK (command accepted)")]
     if stripped.strip() == "?":
+        if (command or "").lower() == "fact" and access == "?":
+            # Over the internal USB port the light has no unlock to give
+            return [("Result", "No unlock needed (normal on the internal USB port)")]
         return [("Result", "NAK (light refused: unknown command or value out of range)")]
 
     pairs = [("Result", "DATA")]
