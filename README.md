@@ -293,6 +293,26 @@ Unit tests (protocol only, no hardware needed):
 python -m unittest test_protocol.py
 ```
 
+## Probing a light (tools/seasense_probe.py)
+
+A small read-only script, separate from the app, that sends each query and
+records every byte that comes back with timestamps (saved to `probe_*.json`).
+Use it to check exact reply formats on a new light or firmware. Close the app
+first so the COM port is free:
+
+```
+python tools/seasense_probe.py COM3
+```
+
+It refuses `=`, `+` or `-` commands unless `--allow-write` is given.
+
+Findings from an LSL-1000 (FW 1.4.1006) over its internal USB port, now in
+the unit tests: every reply arrives as one chunk 1-16 ms after the command;
+`ADGR?` with no groups answers an empty line (empty data, not an ACK);
+`BOOT?` ends its value row with a stray tab; `CHSW?` on a CH1+2 unit, a wrong
+checksum and a broadcast read all get only the `!<LF>` prefix; there is no
+`SAVE?` query. Reply timing over RS-485 has not been measured yet.
+
 ## Files
 
 | File | Purpose |
@@ -300,4 +320,5 @@ python -m unittest test_protocol.py
 | `seasense_gui.py` | The window and the serial worker thread |
 | `seasense_protocol.py` | Command building, checksum, escapes, reply decoding (no GUI) |
 | `test_protocol.py` | Unit tests, including the spec's checksum examples |
+| `tools/seasense_probe.py` | Read-only probe that records a light's exact replies |
 | `.github/workflows/build.yml` | Builds the Windows .exe on every push |
