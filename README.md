@@ -233,10 +233,15 @@ reconnect on the other converter. Read back with `!001:FPRT?`.
 last light at the end of the cable; off for lights in the middle of a multi-light
 bus.
 
-**SAVE after FTEN / FPRT:** on our LSL-1000 (FW 1.4.1001, internal USB port) `SAVE`
-answered `?` after FTEN and after FPRT, yet both settings were kept - they store
-themselves. SAVE did succeed (`System settings written`) after FSET. Confirm
-with `!001:FPRT?` and `!001:FTEN?`.
+**SAVE after FTEN / FPRT:** on a replacement LSL-1000 driver board (FW 1.4.1006,
+internal USB port) `SAVE` answered `?` after FTEN and after FPRT, yet both settings
+were kept - a later probe read back `RS4,1` and termination `1`. They store
+themselves. SAVE answered `System settings written` after FSET on the original
+board (FW 1.4.1001). Confirm with `!001:FPRT?` and `!001:FTEN?`.
+
+**Verified end to end:** that replacement board arrived with a bare flash and was
+set up entirely from this app (FSET with serial number / SER / color / beam, then
+RS-485 + termination); INFO, FPRT? and FTEN? confirmed the result.
 
 ### Maximum output limit (FLMX)
 
