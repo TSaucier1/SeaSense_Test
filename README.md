@@ -65,7 +65,9 @@ sudo usermod -aG dialout $USER
 | GND              | GND     |
 
 Serial settings are fixed by the spec: 8 data bits, no parity, 1 stop bit,
-no flow control. Lights ship at 9600 baud. If nothing answers, try swapping A and B.
+no flow control, 9600 baud by default. If nothing answers, try swapping A and B, and
+check the light's port is set to RS-485 (see Factory settings below - lights set to
+SER default to RS-232).
 
 ## Using it
 
@@ -82,7 +84,8 @@ no flow control. Lights ship at 9600 baud. If nothing answers, try swapping A an
 | Status | INFO, STAT, temperature, humidity, decoded summary, optional auto-poll |
 | Presets | Save / recall / clear presets 1–16, power-on boot preset |
 | Dimming curve | Drag A, B, C, D and YMIN/YMAX on a graph, then **Send curve** |
-| Setup | Change node address, group membership, light baud rate, factory reset, factory configuration (FSET) |
+| Setup | Change node address, group membership, light baud rate, factory reset |
+| Factory | FACT unlock, unit configuration (FSET), serial port + termination (FPRT / FTEN), output limit (FLMX) |
 | Dual / Strobe | CHSW and PMOD/PEDG/PINV/PLEN (lights with those options only; others NAK) |
 
 **Slider:** sends `!ADR:lout=N` once the slider has been still for the
@@ -126,43 +129,110 @@ switches the COM port to the new rate automatically once the light ACKs.
   from B to C, power curve `YMIN + (YMAX-YMIN)·(x/D)^e` from C to D, flat at YMAX
   after D. Serial dimming only uses B..D (LOUT 1 = B, LOUT 100 = D).
 
-## Factory configuration (FSET) - not in the spec
+## Factory settings - from DeepSea's service guides
 
-Found on the bench with an LSL-1000 (FW 1.4.1001): this sequence changed the
-INFO dimming option from `PV` to `SER`. Note FSET's field order differs from INFO.
+None of these are in the SeaSense protocol spec. They come from DeepSea's
+service guides ("Configuring a Spare LSL-2000 Driver Board", "Changing Serial
+Configurations (RS-485 to RS-232)", "Changing the Termination Resistor Setting",
+"Update Maximum LED Output Settings over USB", "Modify LED SeaLite Settings over
+USB", "Setting an LSL-2000 for a Custom Configuration") and from DeepSea support.
+The app's **Factory** tab runs each sequence for you, sends everything without a
+checksum (as the guides do), and stops if a step is refused.
+
+### Two ways to connect
+
+- **External serial pins** on the bulkhead connector, through an RS-485 or RS-232
+  converter (whichever the light's port is set to). A USB isolator is recommended.
+- **Internal micro-USB port** on the driver board (housing open). Windows sees it
+  as a USB serial adapter; 9600 8N1. LED0 blinks at 1 Hz once the light is running.
+  DeepSea: do **not** power the driver board's DC terminals while on USB unless
+  the PC is properly isolated - it can damage the PC.
+
+### Unlocking factory settings (FACT)
+
+On the external serial pins, factory commands only work after an unlock. Ask for
+a one-time code, then send it straight back:
 
 ```
-!001:FSET=<serial>,<dimming>,<color>,<beam>
+!001:FACT?
 ```
 
 ```
-!001:FTEN=1
+!001:FACT=XXXX
+```
+
+(`XXXX` = the 4 characters the light replied with.) The guides for the internal
+USB port do not use FACT. The app always unlocks first; it is harmless on USB.
+
+### Unit configuration (FSET)
+
+Serial number, dimming type, LED color, beam pattern - note the order differs
+from the INFO reply:
+
+```
+!001:FSET=12-049-12345,SER,DW00,WFD
 ```
 
 ```
 !001:SAVE
 ```
 
-Each of the first two answers with an ACK; SAVE answers `System settings written`.
-The Setup tab does this for you: click *Fill from light (INFO)*, change the
-dimming option, then *Write FSET + FTEN + SAVE*. It sends these without a
-checksum (as tested) and stops if any step is refused.
+SAVE answers `System settings written`. Read INFO afterwards to confirm.
 
-### Serial port type (FPRT) - from DeepSea support
+| Dimming | Code | | LED color | Code | | Beam | Code |
+|---|---|---|---|---|---|---|---|
+| No dimming | NON | | Daylight White | DW00 | | Flood (75°) | FLD |
+| 0-5 V | 5V | | Daylight White 90 CRI | DW90 | | Wide Flood (115°) | WFD |
+| 0-10 V | 10V | | Warm White | WW00 | | Medium (40°) | MED |
+| 4-20 mA | 20I | | Green 520-535 nm | G528 | | Spot (35°) | SPT |
+| Serial RS-232/485 | SER | | Blue 465-485 nm | B485 | | | |
+| | | | Red 620-630 nm | R625 | | | |
 
-A light can default to RS-232 and then never answers on RS-485. Over the USB
-programming port, send:
+Our AC-powered LSL-1000 reported `PV`, which is not in any DeepSea document we
+have (probably phase / TRIAC dimming); `FSET=...,SER,...` changed it to serial.
+
+### Serial port (FPRT) and termination resistor (FTEN)
+
+**After FSET to SER the port defaults to RS-232 at 9600.** For RS-485:
 
 ```
 !001:FPRT=RS4,1
 ```
 
+`RS4` = RS-485, `RS2` = RS-232; then the baud code `1` = 9600, `2` = 19200,
+`3` = 57600. FPRT takes effect immediately: if you send it through the external
+port you are changing, the light stops answering there - power it down and
+reconnect on the other converter. Read back with `!001:FPRT?`.
+
+`FTEN` is the **RS-485 termination resistor**, not a "factory enable":
+
+```
+!001:FTEN=1
+```
+
+`1` = on, `0` = off, `!001:FTEN?` reads it. Turn it on for a single light or the
+last light at the end of the cable; off for lights in the middle of a multi-light
+bus. Follow with `!001:SAVE`.
+
+### Maximum output limit (FLMX)
+
+```
+!001:FLMX=80
+```
+
 ```
 !001:SAVE
 ```
 
-`RS4` = RS-485, `1` = 9600 baud (the BAUD codes: 1 = 9600, 2 = 19200, 3 = 57600).
-Power-cycle the light afterwards. The Setup tab has a button for this too.
+Range 10-100; `!001:FLMX?` reads it. DeepSea's LSL-1000 chart shows input power
+from about 27 W at 10 to roughly 135-170 W at 100, depending on line voltage
+(100-140 VAC). Their note: these are estimates, measure before relying on them.
+
+### Custom settings files
+
+DeepSea supplies custom configuration files to send with a terminal program,
+with a **100 ms character delay and 500 ms line delay**. *Send file...* (next to
+the Send box) does exactly that, sending each line as written in the file.
 
 ## Running from source / building locally
 

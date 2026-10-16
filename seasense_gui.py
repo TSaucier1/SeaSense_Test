@@ -53,6 +53,8 @@ SLIDER_PERIOD_MS = 20  # how often the slider checks whether to send
 DEFAULT_SETTLE_MS = 250  # slider must be still this long before sending
                          # (changeable in the window; 0 = every 1 % step)
 GUI_POLL_MS = 30       # how often the window checks for worker events
+FILE_CHAR_DELAY = 0.1  # "Send file": delay between characters (DeepSea: 100 ms)
+FILE_LINE_DELAY = 0.5  # "Send file": delay between lines      (DeepSea: 500 ms)
 
 
 # --------------------------------------------------------------------------
@@ -151,13 +153,26 @@ class SerialWorker(threading.Thread):
     def _transact(self, request):
         data = request["data"]
         self.port.reset_input_buffer()      # forget any old junk
-        self.port.write(data)
-        self.port.flush()
+        char_delay = request.get("char_delay", 0)
+        if char_delay:
+            # Slow sending, one character at a time (DeepSea's settings
+            # files are meant to be sent with a 100 ms character delay)
+            for value in data:
+                if not self.running:
+                    break
+                self.port.write(bytes([value]))
+                self.port.flush()
+                time.sleep(char_delay)
+        else:
+            self.port.write(data)
+            self.port.flush()
         self.events.put(("tx", request))
 
         raw = self._collect(data, request.get("timeout", REPLY_TIMEOUT))
         echo, reply = sp.strip_echo(data, raw) if self.strip_echo else (b"", raw)
         self.events.put(("rx", request, echo, reply))
+        if request.get("post_delay"):
+            time.sleep(request["post_delay"])     # pause before the next line
 
         # Baud rate change: the light ACKs at the OLD rate, then switches.
         # (Broadcast/group commands get no ACK, so switch anyway for those.)
@@ -464,6 +479,7 @@ class App(tk.Tk):
                                ("Presets", self._tab_presets),
                                ("Dimming curve", self._tab_curve),
                                ("Setup", self._tab_setup),
+                               ("Factory", self._tab_factory),
                                ("Dual / Strobe", self._tab_options)]:
             frame = ttk.Frame(tabs, padding=8)
             tabs.add(frame, text=title)
@@ -641,19 +657,32 @@ class App(tk.Tk):
             "presets. The app reads the one-time key and sends it back.")).pack(anchor="w")
         ttk.Button(box, text="Factory reset this light...", command=self.factory_reset).pack(anchor="w", pady=4)
 
-        # FSET / FTEN / SAVE are NOT in the SeaSense spec (Rev C).  The
-        # sequence below was found on the bench with an LSL-1000, FW 1.4.1001,
-        # and changed its INFO dimming option from PV to SER.
-        box = ttk.LabelFrame(tab, text="Factory configuration (FSET / FPRT - not in spec)", padding=8)
-        box.pack(fill=tk.X)
+
+    # ---- Factory tab -----------------------------------------------------
+    # None of these commands are in the SeaSense spec (Rev C).  They come
+    # from DeepSea's service guides ("Configuring a Spare LSL-2000 Driver
+    # Board", "Changing Serial Configurations", "Changing the Termination
+    # Resistor Setting", "Update Maximum LED Output Settings over USB") and
+    # from DeepSea support.  Every write first unlocks factory settings with
+    # FACT? / FACT=<code>, which the guides require on the external serial
+    # pins (the internal micro-USB port does not seem to need it, but it is
+    # harmless there).  All are sent without a checksum, as in the guides.
+    def _tab_factory(self, tab):
+        ttk.Label(tab, foreground="#a51d2d", wraplength=450, justify=tk.LEFT, text=(
+            "Factory settings from DeepSea's service guides (not in the "
+            "protocol spec). Each write unlocks with FACT first.")).pack(anchor="w")
+
+        # --- FSET: serial number, dimming type, LED color, beam pattern ---
+        box = ttk.LabelFrame(tab, text="Unit configuration (FSET)", padding=8)
+        box.pack(fill=tk.X, pady=(6, 0))
         self.fset_serial_var = tk.StringVar()
         self.fset_dimming_var = tk.StringVar(value="SER")
         self.fset_color_var = tk.StringVar()
         self.fset_beam_var = tk.StringVar()
-        fields = [("Serial #", self.fset_serial_var, 16, None),
-                  ("Dimming", self.fset_dimming_var, 6, ["SER", "PV", "A05", "A10", "A20"]),
-                  ("Color", self.fset_color_var, 7, list(sp.LED_COLORS)),
-                  ("Beam", self.fset_beam_var, 7, list(sp.BEAM_PATTERNS))]
+        fields = [("Serial # (from housing)", self.fset_serial_var, 16, None),
+                  ("Dimming", self.fset_dimming_var, 6, sp.FSET_DIMMING_CODES),
+                  ("Color", self.fset_color_var, 7, sp.FSET_COLOR_CODES),
+                  ("Beam", self.fset_beam_var, 6, sp.FSET_BEAM_CODES)]
         for column, (label, var, width, choices) in enumerate(fields):
             ttk.Label(box, text=label).grid(row=0, column=column, sticky="w", padx=2)
             if choices:
@@ -664,32 +693,51 @@ class App(tk.Tk):
         row = ttk.Frame(box)
         row.grid(row=2, column=0, columnspan=4, sticky="w", pady=(6, 0))
         ttk.Button(row, text="Fill from light (INFO)", command=lambda: self.send("info", "?")).pack(side=tk.LEFT, padx=1)
-        ttk.Button(row, text="Write FSET + FTEN + SAVE...", command=self.factory_config).pack(side=tk.LEFT, padx=1)
+        ttk.Button(row, text="Write FSET + SAVE...", command=self.factory_config).pack(side=tk.LEFT, padx=1)
         ttk.Label(box, foreground="gray", wraplength=440, justify=tk.LEFT, text=(
-            "Sends !ADR:FSET=serial,dimming,color,beam  then  FTEN=1  then  SAVE, "
-            "stopping if any step is refused, then reads INFO to confirm. "
-            "Fields fill in automatically whenever INFO is read.")).grid(
-            row=3, column=0, columnspan=4, sticky="w", pady=(4, 0))
+            "Dimming: SER serial, NON none, 5V / 10V analog, 20I 4-20 mA. "
+            "After setting SER the port defaults to RS-232 at 9600 - set the "
+            "port below if you need RS-485.")).grid(row=3, column=0, columnspan=4, sticky="w", pady=(4, 0))
 
-        # FPRT selects the light's serial port type and baud.  From DeepSea
-        # support: "!001:FPRT=RS4,1" then "!001:SAVE" sets RS-485 at 9600.
-        # The light may default to RS-232 (RS2), and then never answers on 485.
-        ttk.Separator(box).grid(row=4, column=0, columnspan=4, sticky="ew", pady=6)
-        ttk.Label(box, text="Port").grid(row=5, column=0, sticky="w", padx=2)
-        ttk.Label(box, text="Baud").grid(row=5, column=1, sticky="w", padx=2)
+        # --- FPRT + FTEN: serial port type, baud, termination resistor ---
+        box = ttk.LabelFrame(tab, text="Serial port (FPRT) and termination (FTEN)", padding=8)
+        box.pack(fill=tk.X, pady=6)
+        ttk.Label(box, text="Port").grid(row=0, column=0, sticky="w", padx=2)
+        ttk.Label(box, text="Baud").grid(row=0, column=1, sticky="w", padx=2)
         self.fprt_port_var = tk.StringVar(value="RS4 = RS-485")
         self.fprt_baud_var = tk.StringVar(value="1 = 9600")
-        ttk.Combobox(box, textvariable=self.fprt_port_var, state="readonly", width=14,
-                     values=["RS4 = RS-485", "RS2 = RS-232 (untested)"]).grid(row=6, column=0, sticky="w", padx=2)
+        self.ften_var = tk.BooleanVar(value=True)
+        ttk.Combobox(box, textvariable=self.fprt_port_var, state="readonly", width=13,
+                     values=["%s = %s" % item for item in sp.PORT_CODES.items()]).grid(
+            row=1, column=0, sticky="w", padx=2)
         ttk.Combobox(box, textvariable=self.fprt_baud_var, state="readonly", width=9,
                      values=["%d = %d" % (code, rate) for code, rate in sp.BAUD_CODES.items()]).grid(
-            row=6, column=1, sticky="w", padx=2)
-        ttk.Button(box, text="Write FPRT + SAVE...", command=self.factory_port).grid(
-            row=6, column=2, columnspan=2, sticky="w", padx=2)
+            row=1, column=1, sticky="w", padx=2)
+        ttk.Checkbutton(box, text="Termination resistor on (RS-485 only)",
+                        variable=self.ften_var).grid(row=1, column=2, columnspan=2, sticky="w", padx=6)
+        row = ttk.Frame(box)
+        row.grid(row=2, column=0, columnspan=4, sticky="w", pady=(6, 0))
+        ttk.Button(row, text="Read port settings", command=self.factory_read_port).pack(side=tk.LEFT, padx=1)
+        ttk.Button(row, text="Write port settings...", command=self.factory_port).pack(side=tk.LEFT, padx=1)
         ttk.Label(box, foreground="gray", wraplength=440, justify=tk.LEFT, text=(
-            "Sets which serial port the light answers on (send over the USB "
-            "programming port). Power-cycle the light afterwards.")).grid(
-            row=7, column=0, columnspan=4, sticky="w", pady=(4, 0))
+            "Termination: on for a single light or the last light on the "
+            "cable; off for lights in the middle of a multi-light bus. FPRT "
+            "takes effect at once, so if you are connected through the port "
+            "you change, replies stop - power-cycle and reconnect on the new "
+            "port.")).grid(row=3, column=0, columnspan=4, sticky="w", pady=(4, 0))
+
+        # --- FLMX: maximum output power limit ---
+        box = ttk.LabelFrame(tab, text="Maximum output limit (FLMX)", padding=8)
+        box.pack(fill=tk.X)
+        self.flmx_var = tk.StringVar(value="100")
+        ttk.Label(box, text="Limit (10-100)").pack(side=tk.LEFT)
+        ttk.Spinbox(box, textvariable=self.flmx_var, from_=10, to=100, width=5).pack(side=tk.LEFT, padx=4)
+        ttk.Button(box, text="Read", command=self.factory_read_flmx).pack(side=tk.LEFT, padx=1)
+        ttk.Button(box, text="Write + SAVE...", command=self.factory_write_flmx).pack(side=tk.LEFT, padx=1)
+        ttk.Label(tab, foreground="gray", wraplength=450, justify=tk.LEFT, text=(
+            "FLMX caps the light's power. DeepSea's LSL-1000 chart: about 27 W "
+            "at 10 up to about 135-170 W at 100 depending on line voltage "
+            "(100-140 VAC) - check actual draw before relying on it.")).pack(anchor="w", pady=(4, 0))
 
     # ---- Optional features tab ------------------------------------------
     def _tab_options(self, tab):
@@ -763,6 +811,7 @@ class App(tk.Tk):
         entry.bind("<Up>", lambda event: self.raw_history_step(-1))
         entry.bind("<Down>", lambda event: self.raw_history_step(1))
         ttk.Button(send_frame, text="Send", command=self.send_raw).pack(side=tk.LEFT)
+        ttk.Button(send_frame, text="Send file...", command=self.send_file).pack(side=tk.LEFT, padx=(4, 0))
 
         opts = ttk.Frame(raw_frame)
         opts.pack(fill=tk.X)
@@ -890,7 +939,7 @@ class App(tk.Tk):
         raw = sp.build_command(address, command, access, data, use_checksum)
         # Spec 3.5: commands are limited to 31 characters.  A full dimming
         # curve plus "*XX" is 32, so drop the (optional) checksum if needed.
-        if len(raw) - len(sp.EOF) > sp.MAX_COMMAND_LENGTH:
+        if use_checksum and len(raw) - len(sp.EOF) > sp.MAX_COMMAND_LENGTH:
             raw = sp.build_command(address, command, access, data, use_checksum=False)
             self.log_note("Checksum left off: command would exceed %d characters"
                           % sp.MAX_COMMAND_LENGTH)
@@ -906,6 +955,38 @@ class App(tk.Tk):
             if not self.raw_history or self.raw_history[-1] != text:
                 self.raw_history.append(text)
             self.history_index = len(self.raw_history)
+
+    def send_file(self):
+        """Send a text file line by line, exactly as written in the file,
+        with DeepSea's settings-file timing (100 ms per character, 500 ms
+        between lines), like RealTerm's "Send File" in their guide."""
+        if not self.worker:
+            messagebox.showinfo(APP_TITLE, "Connect to a COM port first.")
+            return
+        filename = filedialog.askopenfilename(
+            title="Send a settings / command file",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+        if not filename:
+            return
+        with open(filename, "rb") as handle:
+            lines = [line for line in handle.read().splitlines(keepends=True) if line.strip()]
+        if not lines:
+            messagebox.showinfo(APP_TITLE, "That file has no commands in it.")
+            return
+        seconds = sum(len(line) for line in lines) * FILE_CHAR_DELAY + len(lines) * (FILE_LINE_DELAY + 0.2)
+        preview = "\n".join(sp.bytes_to_display(line) for line in lines[:8])
+        if len(lines) > 8:
+            preview += "\n... %d more" % (len(lines) - 8)
+        if not messagebox.askyesno(APP_TITLE, (
+                "Send %d lines from %s?\n\n%s\n\nSent exactly as in the file "
+                "(nothing added), 100 ms per character and 500 ms between lines: "
+                "about %d s. Stop / clear queue cancels.")
+                % (len(lines), os.path.basename(filename), preview, seconds)):
+            return
+        self.log_note("Sending file %s (%d lines)" % (os.path.basename(filename), len(lines)))
+        for line in lines:
+            self.queue_bytes(line, typed=True, char_delay=FILE_CHAR_DELAY,
+                             post_delay=FILE_LINE_DELAY)
 
     def raw_history_step(self, direction):
         if not self.raw_history:
@@ -1040,12 +1121,70 @@ class App(tk.Tk):
                 "will switch the COM port to %d automatically.") % (address, new_baud, new_baud)):
             self.send("baud", "=", code, new_baud=new_baud)
 
-    def factory_config(self):
-        """Write the factory INFO fields: FSET, then FTEN=1, then SAVE.
-        Each step is only sent after the previous one is ACKed."""
+    # ---- Factory commands --------------------------------------------------
+    def factory_address(self, what):
+        """Return the address box value if it is a single light, else warn."""
         address = self.get_address()
         if address is None or not sp.expects_reply(address):
-            messagebox.showwarning(APP_TITLE, "Factory configuration needs a single light's address.")
+            messagebox.showwarning(APP_TITLE, "%s needs a single light's address (001-255)." % what)
+            return None
+        return address
+
+    def run_factory_steps(self, address, steps, done_note=None):
+        """Unlock factory settings, then send each step in order.
+
+        steps is a list of (command, access, data, rule).  The next step is
+        only sent if the reply passes the rule:
+            "ack"    - a plain ACK
+            "answer" - any reply that is not a NAK (SAVE answers with text)
+            "any"    - always continue (used after FPRT, when the light may
+                       have just stopped listening on this port)
+        Everything is sent without a checksum, as in DeepSea's guides.
+        """
+        steps = list(steps)
+
+        def run_next():
+            if not steps:
+                if done_note:
+                    self.log_note(done_note)
+                return
+            command, access, data, rule = steps.pop(0)
+
+            def handler(reply):
+                text = sp.reply_text(reply)
+                ok = (rule == "any"
+                      or (rule == "ack" and sp.is_ack(reply))
+                      or (rule == "answer" and sp.has_answer(reply) and text != "?"))
+                if ok:
+                    run_next()
+                else:
+                    self.log_line("ERROR", "%s not accepted - remaining steps not sent"
+                                  % command.upper(), "error")
+
+            self.send(command, access, data, address=address, checksum=False, on_reply=handler)
+
+        def send_key(reply):
+            """FACT? answers with a one-time 4-character code; write it back
+            straight away (the worker sends this before anything else)."""
+            key = sp.reply_text(reply)
+            if len(key) == 4 and key.isalnum():
+                return sp.build_command(address, "fact", "=", key, use_checksum=False)
+            return None
+
+        def after_query(reply):
+            key = sp.reply_text(reply)
+            if not (len(key) == 4 and key.isalnum()):
+                self.log_note("No FACT unlock code - continuing (not needed on the USB port)")
+            run_next()
+
+        self.send("fact", "?", address=address, checksum=False,
+                  followup=send_key, on_reply=after_query)
+
+    def factory_config(self):
+        """FSET=serial,dimming,color,beam, then SAVE, then INFO to confirm
+        (service guide "Configuring a Spare LSL-2000 Driver Board")."""
+        address = self.factory_address("Unit configuration")
+        if address is None:
             return
         values = [var.get().strip() for var in (self.fset_serial_var, self.fset_dimming_var,
                                                  self.fset_color_var, self.fset_beam_var)]
@@ -1054,68 +1193,68 @@ class App(tk.Tk):
             return
         data = ",".join(values)
         if not messagebox.askyesno(APP_TITLE, (
-                "Write factory configuration to light %s?\n\n"
-                "FSET=%s\nFTEN=1\nSAVE\n\n"
-                "These commands are not in the SeaSense spec. Check the serial "
-                "number, color and beam match the light's label.") % (address, data),
-                icon="warning"):
+                "Write unit configuration to light %s?\n\n"
+                "FACT unlock\nFSET=%s\nSAVE\n\n"
+                "Check the serial number, color and beam against the labels on "
+                "the housing.") % (address, data), icon="warning"):
             return
-
-        def step(name, next_step):
-            """Return a reply handler: continue only if the light ACKed
-            (SAVE answers with text, so any non-NAK answer counts there)."""
-            def handler(reply):
-                text = sp.reply_text(reply)
-                ok = sp.is_ack(reply) or (name == "SAVE" and sp.has_answer(reply) and text != "?")
-                if ok:
-                    next_step()
-                else:
-                    self.log_line("ERROR", "%s not accepted - sequence stopped" % name, "error")
-            return handler
-
-        def send_info():
-            self.send("info", "?")
-
-        def send_save():
-            self.send("save", address=address, checksum=False, on_reply=step("SAVE", send_info))
-
-        def send_ften():
-            self.send("ften", "=", 1, address=address, checksum=False, on_reply=step("FTEN", send_save))
-
-        # Sent without checksum, exactly as verified on the bench
-        self.send("fset", "=", data, address=address, checksum=False, on_reply=step("FSET", send_ften))
+        self.run_factory_steps(address, [("fset", "=", data, "ack"),
+                                         ("save", "", "", "answer"),
+                                         ("info", "?", "", "answer")])
 
     def factory_port(self):
-        """Set the light's serial port type and baud: FPRT, then SAVE."""
-        address = self.get_address()
-        if address is None or not sp.expects_reply(address):
-            messagebox.showwarning(APP_TITLE, "Port configuration needs a single light's address.")
+        """Termination (RS-485 only), SAVE, then FPRT last because it may
+        move the light to the other port immediately."""
+        address = self.factory_address("Port configuration")
+        if address is None:
             return
         port = self.fprt_port_var.get().split()[0]          # "RS4"
         baud_code = self.fprt_baud_var.get().split()[0]     # "1"
         data = "%s,%s" % (port, baud_code)
+        steps = []
+        lines = ["FACT unlock"]
+        if port == "RS4":
+            termination = 1 if self.ften_var.get() else 0
+            steps += [("ften", "=", termination, "ack"), ("save", "", "", "answer")]
+            lines += ["FTEN=%d (termination %s)" % (termination, "on" if termination else "off"), "SAVE"]
+        steps += [("fprt", "=", data, "any"), ("save", "", "", "any"),
+                  ("fprt", "?", "", "any"), ("ften", "?", "", "any")]
+        lines += ["FPRT=%s" % data, "SAVE", "FPRT? and FTEN? to confirm"]
         if not messagebox.askyesno(APP_TITLE, (
-                "Write port configuration to light %s?\n\nFPRT=%s\nSAVE\n\n"
-                "The light will then answer on %s at %s baud (after a power cycle).")
-                % (address, data, self.fprt_port_var.get().split("= ")[1],
+                "Write port settings to light %s?\n\n%s\n\n"
+                "The light will answer on %s at %d baud. If you are connected "
+                "through the port being changed, it stops answering after FPRT: "
+                "power-cycle it and reconnect on the new port.")
+                % (address, "\n".join(lines), sp.PORT_CODES[port],
                    sp.BAUD_CODES[int(baud_code)]), icon="warning"):
             return
+        self.run_factory_steps(address, steps, done_note=(
+            "Port settings sent. If replies stopped after FPRT, that is expected: "
+            "power-cycle the light and connect on the new port / baud."))
 
-        def after_fprt(reply):
-            if sp.is_ack(reply):
-                self.send("save", address=address, checksum=False, on_reply=after_save)
-            else:
-                self.log_line("ERROR", "FPRT not accepted - SAVE not sent", "error")
+    def factory_read_port(self):
+        address = self.factory_address("Reading port settings")
+        if address:
+            self.run_factory_steps(address, [("fprt", "?", "", "any"), ("ften", "?", "", "any")])
 
-        def after_save(reply):
-            if sp.has_answer(reply) and sp.reply_text(reply) != "?":
-                self.log_note("Port settings saved - power-cycle the light, then "
-                              "connect on the new port at the new baud")
-            else:
-                self.log_line("ERROR", "SAVE not accepted", "error")
+    def factory_read_flmx(self):
+        address = self.factory_address("Reading FLMX")
+        if address:
+            self.run_factory_steps(address, [("flmx", "?", "", "any")])
 
-        # Sent without checksum, exactly as DeepSea gave it
-        self.send("fprt", "=", data, address=address, checksum=False, on_reply=after_fprt)
+    def factory_write_flmx(self):
+        address = self.factory_address("Writing FLMX")
+        if address is None:
+            return
+        value = self.flmx_var.get().strip()
+        if not value.isdigit() or not 10 <= int(value) <= 100:
+            messagebox.showwarning(APP_TITLE, "FLMX must be a whole number from 10 to 100.")
+            return
+        if messagebox.askyesno(APP_TITLE, "Set light %s maximum output limit to %s?\n\n"
+                               "FACT unlock\nFLMX=%s\nSAVE\nFLMX? to confirm" % (address, value, value)):
+            self.run_factory_steps(address, [("flmx", "=", value, "ack"),
+                                             ("save", "", "", "answer"),
+                                             ("flmx", "?", "", "any")])
 
     def factory_reset(self):
         address = self.get_address()
@@ -1233,6 +1372,10 @@ class App(tk.Tk):
         for label, value in pairs:
             if label in self.summary:
                 self.summary[label].config(text=value)
+        if command == "flmx":
+            for label, value in pairs:
+                if label.startswith("Max output limit") and value.split()[0].isdigit():
+                    self.flmx_var.set(value.split()[0])
         if command == "info":
             # Keep the factory-configuration boxes in step with the light.
             # Values look like "DW00 = Daylight White", so keep the code only.

@@ -166,6 +166,16 @@ class ReplyTests(unittest.TestCase):
         self.assertIn("NO REPLY", parse_reply("chsw", "?", b"!\n")[0][1])
         self.assertIn("no light has this address", parse_reply("chsw", "?", b"!\n")[0][1])
 
+    def test_factory_replies(self):
+        """FPRT / FTEN / FLMX replies, codes from DeepSea's service guides."""
+        self.assertEqual(parse_reply("fprt", "?", b"!\nRS4,1\r\n")[1], ("Serial port", "RS4,1 = RS-485, 9600 baud"))
+        self.assertEqual(parse_reply("fprt", "?", b"!\nRS2,3\r\n")[1], ("Serial port", "RS2,3 = RS-232, 57600 baud"))
+        self.assertEqual(parse_reply("ften", "?", b"!\n1\r\n")[1], ("Termination resistor", "1 = On"))
+        self.assertEqual(parse_reply("flmx", "?", b"!\n80\r\n")[1], ("Max output limit (FLMX)", "80 (10-100)"))
+        info = dict(parse_reply("info", "?", b"!\n001,LSL-2000,12-049-12345,0A,1.4.1001,DW90,WFD,10V,CH1\r\n"))
+        self.assertEqual(info["LED color"], "DW90 = Daylight White 90 CRI")
+        self.assertEqual(info["Dimming control"], "10V = Analog 0-10 V")
+
     def test_curve_model(self):
         from seasense_protocol import curve_output
         # Linear curve from the spec: output follows input

@@ -280,19 +280,34 @@ def strip_echo(sent, received):
 # Lookup tables used when decoding replies --------------------------------
 
 # Appendix E: option codes in an LED SeaLite INFO string
+# Sources: spec Rev C Appendix E, plus DeepSea's service guide "Configuring
+# a Spare LSL-2000 Driver Board" (2025), which lists the codes FSET accepts.
 LED_COLORS = {
-    "CW00": "Cool White", "DW00": "Daylight White", "WW00": "Warm White",
-    "R625": "Red 625 nm", "BL475": "Blue 475 nm", "G528": "Green 528 nm",
+    "CW00": "Cool White", "DW00": "Daylight White", "DW90": "Daylight White 90 CRI",
+    "WW00": "Warm White", "R625": "Red 620-630 nm", "BL475": "Blue 475 nm",
+    "B485": "Blue 465-485 nm", "G528": "Green 520-535 nm",
     "U365": "UV 365 nm", "U405": "UV 405 nm", "R850": "IR 850 nm",
 }
 BEAM_PATTERNS = {
-    "WFD": "Wide Flood", "FLD": "Flood", "MED": "Medium Spot",
-    "SPT": "Narrow Spot", "75/40": "75/40 Dual Beam", "115/75": "115/75 Dual Beam",
+    "WFD": "Wide Flood (115°)", "FLD": "Flood (75°)", "MED": "Medium (40°)",
+    "SPT": "Spot (35°)", "75/40": "75/40 Dual Beam", "115/75": "115/75 Dual Beam",
 }
 DIMMING_CONTROLS = {
+    # Codes FSET accepts (service guide)
+    "NON": "No dimming", "5V": "Analog 0-5 V", "10V": "Analog 0-10 V",
+    "20I": "Analog 4-20 mA", "SER": "Serial RS-232/485",
+    # Older codes printed in the spec's Appendix E
     "A05": "Analog 0-5 V", "A10": "Analog 0-10 V", "A20": "Analog 4-20 mA",
-    "SER": "Serial RS-232/485",
+    # Seen on an AC-powered LSL-1000; not in any DeepSea document we have
+    "PV": "undocumented (seen on AC LSL-1000, likely phase dimming)",
 }
+# Codes offered in the FSET "Dimming" box, in the service guide's order
+FSET_DIMMING_CODES = ["SER", "NON", "5V", "10V", "20I", "PV"]
+FSET_COLOR_CODES = ["DW00", "DW90", "WW00", "G528", "B485", "R625"]
+FSET_BEAM_CODES = ["FLD", "WFD", "MED", "SPT"]
+
+# FPRT serial port codes (service guide): interface, then a BAUD code
+PORT_CODES = {"RS4": "RS-485", "RS2": "RS-232"}
 
 CURVE_NAMES = ["YMIN (%)", "YMAX (%)", "A (turn-on)", "B (linear start)",
                "C (exp start)", "D (max point)", "e (exponent)"]
@@ -351,6 +366,10 @@ SIMPLE_READS = {
     "plen": ("Pulse length", " ms"),
     "rset": ("Reset key", ""),
     "vtst": ("Video test pattern", {"0": "Off", "1": "On"}),
+    # Factory commands from DeepSea's service guides (not in the spec)
+    "ften": ("Termination resistor", {"0": "Off", "1": "On"}),
+    "flmx": ("Max output limit (FLMX)", " (10-100)"),
+    "fact": ("Factory unlock code", ""),
 }
 
 
@@ -403,6 +422,13 @@ def parse_reply(command, access, reply, reply_expected=True):
             pairs.append((label, value + " = " + extra.get(value, "unknown value")))
         else:
             pairs.append((label, value + extra))
+
+    # FPRT returns "port,baud code", e.g. "RS4,1" -------------------------
+    elif command == "fprt":
+        parts = [p.strip() for p in stripped.split(",")]
+        port = PORT_CODES.get(parts[0].upper(), parts[0])
+        rate = BAUD_CODES.get(int(parts[1])) if len(parts) > 1 and parts[1].isdigit() else None
+        pairs.append(("Serial port", "%s = %s%s" % (stripped, port, ", %d baud" % rate if rate else "")))
 
     # BAUD returns a code 1/2/3 ---------------------------------------------
     elif command == "baud":
