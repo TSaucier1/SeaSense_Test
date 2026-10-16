@@ -227,7 +227,13 @@ reconnect on the other converter. Read back with `!001:FPRT?`.
 
 `1` = on, `0` = off, `!001:FTEN?` reads it. Turn it on for a single light or the
 last light at the end of the cable; off for lights in the middle of a multi-light
-bus. Follow with `!001:SAVE`.
+bus.
+
+**SAVE after FTEN / FPRT:** on our LSL-1000 (FW 1.4.1001, internal USB port) `SAVE`
+answered `?` after FTEN and after FPRT, yet both settings were kept - they store
+themselves. SAVE did succeed (`System settings written`) after FSET. Confirm
+with `!001:FPRT?` and `!001:FTEN?`. On that same port `FACT?` also answered `?`:
+no unlock was needed.
 
 ### Maximum output limit (FLMX)
 

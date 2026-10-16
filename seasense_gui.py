@@ -1176,7 +1176,7 @@ class App(tk.Tk):
         def after_query(reply):
             key = sp.reply_text(reply)
             if not (len(key) == 4 and key.isalnum()):
-                self.log_note("No FACT unlock code - continuing (not needed on the USB port)")
+                self.log_note("Light did not ask for a FACT unlock - continuing")
             run_next()
 
         self.send("fact", "?", address=address, checksum=False,
@@ -1213,15 +1213,20 @@ class App(tk.Tk):
         port = self.fprt_port_var.get().split()[0]          # "RS4"
         baud_code = self.fprt_baud_var.get().split()[0]     # "1"
         data = "%s,%s" % (port, baud_code)
+        # Order matters: FTEN first, then FPRT (which may move the light to
+        # the other port at once).  On a real LSL-1000 (FW 1.4.1001) SAVE
+        # answered "?" after FTEN and after FPRT, yet both settings were
+        # kept - they store themselves.  So SAVE is sent but never stops the
+        # sequence, and the read-backs at the end are the real check.
         steps = []
-        lines = ["FACT unlock"]
+        lines = ["FACT unlock (if the light asks for one)"]
         if port == "RS4":
             termination = 1 if self.ften_var.get() else 0
-            steps += [("ften", "=", termination, "ack"), ("save", "", "", "answer")]
-            lines += ["FTEN=%d (termination %s)" % (termination, "on" if termination else "off"), "SAVE"]
+            steps += [("ften", "=", termination, "ack")]
+            lines += ["FTEN=%d (termination %s)" % (termination, "on" if termination else "off")]
         steps += [("fprt", "=", data, "any"), ("save", "", "", "any"),
                   ("fprt", "?", "", "any"), ("ften", "?", "", "any")]
-        lines += ["FPRT=%s" % data, "SAVE", "FPRT? and FTEN? to confirm"]
+        lines += ["FPRT=%s" % data, "SAVE (a ? reply here is normal)", "FPRT? and FTEN? to confirm"]
         if not messagebox.askyesno(APP_TITLE, (
                 "Write port settings to light %s?\n\n%s\n\n"
                 "The light will answer on %s at %d baud. If you are connected "
@@ -1231,8 +1236,9 @@ class App(tk.Tk):
                    sp.BAUD_CODES[int(baud_code)]), icon="warning"):
             return
         self.run_factory_steps(address, steps, done_note=(
-            "Port settings sent. If replies stopped after FPRT, that is expected: "
-            "power-cycle the light and connect on the new port / baud."))
+            "Port settings sent - check the FPRT? / FTEN? read-backs above. If replies "
+            "stopped after FPRT, that is expected: power-cycle the light and connect "
+            "on the new port / baud."))
 
     def factory_read_port(self):
         address = self.factory_address("Reading port settings")
@@ -1253,9 +1259,9 @@ class App(tk.Tk):
             messagebox.showwarning(APP_TITLE, "FLMX must be a whole number from 1 to 100.")
             return
         if messagebox.askyesno(APP_TITLE, "Set light %s maximum output limit to %s?\n\n"
-                               "FACT unlock\nFLMX=%s\nSAVE\nFLMX? to confirm" % (address, value, value)):
+                               "FACT unlock\nFLMX=%s\nSAVE\nFLMX? to confirm (the read-back is the real check)" % (address, value, value)):
             self.run_factory_steps(address, [("flmx", "=", value, "ack"),
-                                             ("save", "", "", "answer"),
+                                             ("save", "", "", "any"),
                                              ("flmx", "?", "", "any")])
 
     def factory_reset(self):
