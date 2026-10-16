@@ -482,7 +482,7 @@ def parse_reply(command, access, reply, reply_expected=True):
                 pairs.append(("Dimming control", "%s = %s" % (option, DIMMING_CONTROLS.get(
                     option.upper(), "not listed in spec Rev C"))))
             elif is_light and option.upper().startswith("CH"):
-                pairs.append(("Output channels", option + (" = dual output (CHSW works)"
+                pairs.append(("Output channels", option + (" = dual output"
                                                            if "+" in option else "")))
             else:
                 pairs.append(("Option %d" % number, option))

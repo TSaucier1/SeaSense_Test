@@ -29,7 +29,7 @@ import queue
 import threading
 import time
 import tkinter as tk
-from tkinter import filedialog, messagebox, scrolledtext, ttk
+from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 
 import serial
 import serial.tools.list_ports
@@ -625,6 +625,15 @@ class App(tk.Tk):
 
     # ---- Setup tab -------------------------------------------------------
     def _tab_setup(self, tab):
+        box = ttk.LabelFrame(tab, text="One-step setup: serial RS-485 light", padding=8)
+        box.pack(fill=tk.X, pady=(0, 8))
+        ttk.Button(box, text="One-step setup...", command=self.one_step_setup).pack(anchor="w")
+        ttk.Label(box, foreground="gray", wraplength=410, justify=tk.LEFT, text=(
+            "Reads INFO for the serial number (and color / beam), then sets "
+            "SER dimming, RS-485 at 9600 with termination on, and reads it all "
+            "back to check. Same steps as the Factory tab, in one go. Best done "
+            "over the internal USB port.")).pack(anchor="w", pady=(4, 0))
+
         box = ttk.LabelFrame(tab, text="Change this light's node address (ADDR)", padding=8)
         box.pack(fill=tk.X)
         self.new_address_var = tk.StringVar(value="002")
@@ -1145,7 +1154,7 @@ class App(tk.Tk):
             return None
         return address
 
-    def run_factory_steps(self, address, steps, done_note=None):
+    def run_factory_steps(self, address, steps, done_note=None, on_done=None, on_fail=None):
         """Unlock factory settings, then send each step in order.
 
         steps is a list of (command, access, data, rule).  The next step is
@@ -1155,17 +1164,25 @@ class App(tk.Tk):
             "any"    - always continue (used after FPRT, when the light may
                        have just stopped listening on this port)
         Everything is sent without a checksum, as in DeepSea's guides.
+
+        on_done(replies) runs after the last step; replies maps e.g. "fprt?"
+        to the raw bytes the light sent.  on_fail(command) runs if a step is
+        refused.
         """
         steps = list(steps)
+        replies = {}
 
         def run_next():
             if not steps:
                 if done_note:
                     self.log_note(done_note)
+                if on_done:
+                    on_done(replies)
                 return
             command, access, data, rule = steps.pop(0)
 
             def handler(reply):
+                replies[command + access] = reply
                 text = sp.reply_text(reply)
                 ok = (rule == "any"
                       or (rule == "ack" and sp.is_ack(reply))
@@ -1175,6 +1192,8 @@ class App(tk.Tk):
                 else:
                     self.log_line("ERROR", "%s not accepted - remaining steps not sent"
                                   % command.upper(), "error")
+                    if on_fail:
+                        on_fail(command)
 
             self.send(command, access, data, address=address, checksum=False, on_reply=handler)
 
@@ -1195,6 +1214,106 @@ class App(tk.Tk):
 
         self.send("fact", "?", address=address, checksum=False,
                   followup=send_key, on_reply=after_query)
+
+    # ---- One-step setup ----------------------------------------------------
+    # The settings used on our LSL-1000 driver boards (both set up from a
+    # bare flash with this app).  Color and beam come from the light's own
+    # INFO when it has them; these are only the fallback for a blank board.
+    SETUP_DIMMING = "SER"
+    SETUP_PORT = "RS4,1"            # RS-485, 9600 baud
+    SETUP_TERMINATION = 1           # termination resistor on
+    SETUP_DEFAULT_COLOR = "DW00"
+    SETUP_DEFAULT_BEAM = "FLD"
+
+    def one_step_setup(self):
+        """Step 1: read INFO.  The rest happens in one_step_plan()."""
+        address = self.factory_address("One-step setup")
+        if address:
+            self.log_note("One-step setup: reading INFO from light %s" % address)
+            self.send("info", "?", address=address,
+                      on_reply=lambda reply: self.one_step_plan(address, reply))
+
+    def one_step_plan(self, address, reply):
+        """Step 2: work out the values, confirm them, then send everything."""
+        if not sp.has_answer(reply):
+            messagebox.showerror(APP_TITLE, "The light did not answer INFO - check the "
+                                            "connection, address and baud rate first.")
+            return
+        info = dict(sp.parse_reply("info", "?", reply))
+        # INFO values look like "DW00 = Daylight White": keep just the code
+        serial = info.get("Serial number", "").strip()
+        color = (info.get("LED color", "").split() or [""])[0]
+        beam = (info.get("Beam pattern", "").split() or [""])[0]
+        color = color if color in sp.LED_COLORS else self.SETUP_DEFAULT_COLOR
+        beam = beam if beam in sp.BEAM_PATTERNS else self.SETUP_DEFAULT_BEAM
+
+        if not serial:
+            # A freshly flashed board can have a blank serial number
+            serial = simpledialog.askstring(
+                APP_TITLE, "The light has no serial number yet.\n"
+                           "Type it from the housing (e.g. 12-049-05581):", parent=self)
+            if not serial:
+                return
+            serial = serial.strip()
+
+        fset = "%s,%s,%s,%s" % (serial, self.SETUP_DIMMING, color, beam)
+        if not messagebox.askyesno(APP_TITLE, (
+                "One-step setup for light %s:\n\n"
+                "  Serial number: %s\n  Dimming: %s (serial)\n  LED color: %s\n  Beam: %s\n"
+                "  Port: RS-485, 9600 baud\n  Termination resistor: on\n\n"
+                "Commands: FACT unlock (if asked), FSET=%s, SAVE, FTEN=%d, FPRT=%s, SAVE,\n"
+                "then INFO? / FPRT? / FTEN? to check.\n\n"
+                "Check the serial number, color and beam against the housing labels.")
+                % (address, serial, self.SETUP_DIMMING, color, beam, fset,
+                   self.SETUP_TERMINATION, self.SETUP_PORT), icon="warning"):
+            return
+
+        expected = {"serial": serial, "dimming": self.SETUP_DIMMING,
+                    "port": self.SETUP_PORT, "termination": str(self.SETUP_TERMINATION)}
+        # FTEN before FPRT: FPRT may move the light to the other port at once.
+        # SAVE after FTEN / FPRT may answer "?" even though both are kept, so
+        # those SAVEs never stop the sequence; the read-backs are the check.
+        steps = [("fset", "=", fset, "ack"),
+                 ("save", "", "", "answer"),
+                 ("ften", "=", self.SETUP_TERMINATION, "ack"),
+                 ("fprt", "=", self.SETUP_PORT, "any"),
+                 ("save", "", "", "any"),
+                 ("info", "?", "", "any"),
+                 ("fprt", "?", "", "any"),
+                 ("ften", "?", "", "any")]
+        self.run_factory_steps(
+            address, steps,
+            on_done=lambda replies: self.one_step_check(expected, replies),
+            on_fail=lambda command: messagebox.showerror(
+                APP_TITLE, "One-step setup stopped: the light refused %s.\n"
+                           "See the raw traffic for details." % command.upper()))
+
+    def one_step_check(self, expected, replies):
+        """Step 3: compare the read-backs with what was sent."""
+        info = dict(sp.parse_reply("info", "?", replies.get("info?", b"")))
+        results = [
+            ("Serial number", expected["serial"], info.get("Serial number", "")),
+            ("Dimming", expected["dimming"], (info.get("Dimming control", "").split() or [""])[0]),
+            ("Serial port", expected["port"], sp.reply_text(replies.get("fprt?", b""))),
+            ("Termination", expected["termination"], sp.reply_text(replies.get("ften?", b""))),
+        ]
+        lines = []
+        all_ok = True
+        for name, want, got in results:
+            ok = got.upper() == want.upper()
+            all_ok = all_ok and ok
+            lines.append("%s %s: %s%s" % ("OK  " if ok else "FAIL", name, got or "(no reply)",
+                                          "" if ok else "  (expected %s)" % want))
+        for line in lines:
+            self.log_line("SETUP", line, "note" if line.startswith("OK") else "error")
+        if all_ok:
+            messagebox.showinfo(APP_TITLE, "One-step setup complete:\n\n" + "\n".join(lines))
+        else:
+            messagebox.showwarning(APP_TITLE, (
+                "One-step setup finished, but not everything read back as expected:\n\n%s\n\n"
+                "If the replies stopped after FPRT you are probably connected through the "
+                "port that was just changed: power-cycle the light, connect on RS-485 at "
+                "9600 and use Read all to check.") % "\n".join(lines))
 
     def factory_config(self):
         """FSET=serial,dimming,color,beam, then SAVE, then INFO to confirm

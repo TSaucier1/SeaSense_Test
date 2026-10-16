@@ -84,7 +84,7 @@ SER default to RS-232).
 | Status | INFO, STAT, temperature, humidity, serial port + termination, decoded summary, optional auto-poll |
 | Presets | Save / recall / clear presets 1–16, power-on boot preset |
 | Dimming curve | Drag A, B, C, D and YMIN/YMAX on a graph, then **Send curve** |
-| Setup | Change node address, group membership, light baud rate, factory reset |
+| Setup | **One-step setup** (serial number from INFO, SER, RS-485 9600, termination on, read-back check), node address, groups, baud rate, factory reset |
 | Factory | FACT unlock, unit configuration (FSET), serial port + termination (FPRT / FTEN), output limit (FLMX) |
 | Dual / Strobe | CHSW and PMOD/PEDG/PINV/PLEN (lights with those options only; others NAK) |
 
@@ -138,6 +138,19 @@ Configurations (RS-485 to RS-232)", "Changing the Termination Resistor Setting",
 USB", "Setting an LSL-2000 for a Custom Configuration") and from DeepSea support.
 The app's **Factory** tab runs each sequence for you, sends everything without a
 checksum (as the guides do), and stops if a step is refused.
+
+### One-step setup (Setup tab)
+
+For a serial RS-485 light, best over the internal USB port. Reads `INFO?` for the
+serial number, LED color and beam (asks you to type the serial number if a freshly
+flashed board has none; color / beam fall back to `DW00` / `FLD`), shows the plan,
+then sends:
+
+FACT unlock (if the light asks) -> `FSET=<serial>,SER,<color>,<beam>` -> `SAVE` ->
+`FTEN=1` -> `FPRT=RS4,1` -> `SAVE` -> `INFO?` / `FPRT?` / `FTEN?`
+
+and reports OK / FAIL for serial number, dimming, port and termination. It stops
+if FSET or FTEN is refused. Power-cycle the light afterwards and connect on RS-485.
 
 ### LSL-1000 vs LSL-2000
 
