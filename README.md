@@ -328,6 +328,14 @@ Unit tests (protocol only, no hardware needed):
 python -m unittest test_protocol.py
 ```
 
+## Protocol field notes
+
+[docs/SeaSense_field_notes.md](docs/SeaSense_field_notes.md) lists everything the
+real lights do that the Rev C spec doesn't say: the `!<LF>` reply prefix, reply
+endings, what SAVE's `?` means, the factory commands (FACT / FSET / FPRT / FTEN /
+FLMX), USB vs RS-485 differences, and an integration checklist, each tagged by
+how it was verified. Start there if you are building a driver for a larger system.
+
 ## Testing
 
 See [TESTING.md](TESTING.md): protocol unit tests, app tests against a fake light
@@ -367,4 +375,5 @@ checksum and a broadcast read all get only the `!<LF>` prefix; there is no
 | `tools/hil_test.py` | Hardware-in-the-loop test runner and report |
 | `tests/test_app.py` | App tests against the fake light |
 | `TESTING.md` | How to test, including a procedure for a local Claude Code session |
+| `docs/SeaSense_field_notes.md` | Protocol behaviour beyond the spec, for integrators |
 | `.github/workflows/build.yml` | Builds the Windows .exe on every push |
