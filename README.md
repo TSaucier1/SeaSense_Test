@@ -5,6 +5,11 @@ A small stand-alone Windows GUI for bench-testing DeepSea Power & Light LED
 SeaLite lights (LSL-1000 and similar) over RS-485 / RS-232 using the
 SeaSense serial protocol (792-004-013-0A-01 Rev C).
 
+**Quick links:**
+[Protocol field notes](docs/SeaSense_field_notes.md) (how the real lights differ from the spec - start here if you are integrating them) ·
+[Testing](TESTING.md) ·
+[Latest release](https://github.com/TSaucier1/SeaSense_Test/releases/latest)
+
 ## Getting the .exe
 
 The Windows build is made automatically by GitHub Actions; no Python install needed.
