@@ -120,6 +120,32 @@ class AppTestCase(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+class FakeLightSaveTests(unittest.TestCase):
+    """The fake light alone (no app, no Tk), replaying a sequence sent to the
+    real light: LSL-1000, FW 1.4.1006, internal USB, 2026-10-16
+    (docs/probe_20261016_223932.json)."""
+
+    CAPTURE = [
+        ("!001:SAVE", "?\r\n"),
+        ("!001:SAVE", "?\r\n"),
+        ("!001:FSET=12-049-05581,SER,DW00,FLD", "\r\n"),    # same values
+        ("!001:SAVE", "?\r\n"),
+        ("!001:LOUT=10", "\r\n"),
+        ("!001:LOUT=1", "\r\n"),
+        ("!001:SAVE", "System settings written\r\n"),
+        ("!001:SAVE", "?\r\n"),
+        ("!001:FTEN=1", "\r\n"),
+        ("!001:SAVE", "?\r\n"),
+    ]
+
+    def test_save_answers_like_the_real_light(self):
+        light = FakeLight()
+        light.dimming, light.lout, light.termination = "SER", 1, 1   # as the real light was
+        bus = FakeBus(lights=[light])
+        for line, expected in self.CAPTURE:
+            self.assertEqual(bus.handle(line), expected, line)
+
+
 class ReadTests(AppTestCase):
 
     def test_read_all_fills_summary_and_port(self):
@@ -174,8 +200,8 @@ class SliderTests(AppTestCase):
 
 
 class OneStepUsbTests(AppTestCase):
-    """Internal USB port, FW 1.4.1006: no FACT unlock; SAVE answers 'System
-    settings written' after FSET and '?' after FTEN / FPRT."""
+    """Internal USB port, FW 1.4.1006: no FACT unlock; SAVE answers '?' when
+    there is nothing unsaved (see FakeLightSaveTests)."""
 
     def test_configures_and_verifies(self):
         self.app.one_step_setup()
@@ -189,16 +215,27 @@ class OneStepUsbTests(AppTestCase):
         for item in ("Serial number", "Dimming", "Serial port", "Termination"):
             self.assertIn("SETUP  OK   " + item, self.raw_log().replace("SETUP OK", "SETUP  OK"))
 
-    def test_save_replies_match_hardware(self):
-        # HIL run 2026-10-16, USB, FW 1.4.1006: the two SAVEs of one-step setup
+    def save_replies(self):
+        return [reply for line, reply in self.bus.log if line.lower() == "!001:save"]
+
+    def test_already_configured_light_saves_nothing(self):
+        # App v1.0.17 screenshot, 21:43 on 2026-10-16: light already SER, so
+        # both SAVEs answer "?" - the app must still finish and report OK
+        self.bus.light().dimming = "SER"
         self.app.one_step_setup()
         self.pump_until(lambda: self.dialog("info") or self.dialog("error"))
-        saves = [reply for line, reply in self.bus.log if line.lower() == "!001:save"]
-        self.assertEqual(saves, ["System settings written\r\n", "?\r\n"])
+        self.assertEqual(self.save_replies(), ["?\r\n", "?\r\n"])
+        self.assertTrue(self.dialog("info"), self.dialogs)
+
+    def test_new_values_are_written(self):
+        # Light still reports PV: FSET changes it, the first SAVE writes it
+        self.app.one_step_setup()
+        self.pump_until(lambda: self.dialog("info") or self.dialog("error"))
+        self.assertEqual(self.save_replies(), ["System settings written\r\n", "?\r\n"])
         self.assertTrue(self.dialog("info"), self.dialogs)
 
     def test_save_refusal_does_not_stop_it(self):
-        # Seen on the real board too: SAVE answered "?" even after FSET
+        # Every SAVE answers "?" - the bug in v1.0.17 stopped the sequence here
         self.bus.refuse.add("save")
         self.app.one_step_setup()
         self.pump_until(lambda: self.dialog("info") or self.dialog("error"))

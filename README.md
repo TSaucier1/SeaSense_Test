@@ -247,16 +247,25 @@ reconnect on the other converter. Read back with `!001:FPRT?`.
 last light at the end of the cable; off for lights in the middle of a multi-light
 bus.
 
-**SAVE after FTEN / FPRT:** on a replacement LSL-1000 driver board (FW 1.4.1006,
-internal USB port) `SAVE` answered `?` after FTEN and after FPRT, yet both settings
-were kept - a later probe read back `RS4,1` and termination `1`. They store
-themselves. SAVE answered `System settings written` after FSET on the original
-board (FW 1.4.1001). On the FW 1.4.1006 board it answered `?` after FSET once and
-`System settings written` after FSET in the HIL run of 2026-10-16 (both times
-with unchanged values; FTEN / FPRT -> SAVE still gave `?`, see
-`docs/hil_report_20261016_221122.md`). So the app never treats a SAVE reply as a failure: it
-reads the settings back instead. Confirm with `!001:FPRT?` and `!001:FTEN?`, and
-after a power cycle with *Read all*.
+**What SAVE's reply means:** `System settings written` = there were unsaved
+changes and they are now stored; `?` = **nothing to save** (not a refusal).
+Measured on an LSL-1000, FW 1.4.1006, internal USB port, 2026-10-16
+(`docs/probe_20261016_223932.json`):
+
+| Sequence | SAVE reply |
+|---|---|
+| SAVE twice in a row | `?`, `?` |
+| FSET with the values it already has -> SAVE | `?` |
+| LOUT=10, LOUT=1 -> SAVE | `System settings written` (any LOUT write counts, even back to the old value) |
+| SAVE again | `?` |
+| FTEN=1 (unchanged) -> SAVE | `?` |
+
+FTEN and FPRT store themselves: on a bare replacement board SAVE answered `?`
+after changing them, yet `RS4,1` and termination `1` were kept. FSET with new
+values gave `System settings written` on FW 1.4.1001. So the app never treats a
+SAVE reply as a failure: it reads the settings back instead. Confirm with
+`!001:FPRT?` and `!001:FTEN?`, and after a power cycle with *Read all*.
+(App v1.0.17 stopped one-step setup on a `?` from SAVE; fixed in v1.0.18.)
 
 **Verified end to end:** that replacement board arrived with a bare flash and was
 set up entirely from this app (FSET with serial number / SER / color / beam, then

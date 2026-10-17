@@ -70,7 +70,10 @@ Report back: the hil_report table, what changed, and anything still unverified.
 
 ## Still not covered by any layer
 
-- Reply timing through the RS-485 adapter at 9600 baud (everything so far was
-  captured over USB). Run `python tools/seasense_probe.py COM<n>` through the
+- Exact reply timing through the RS-485 adapter at 9600 baud (all byte captures
+  so far were over USB). Run `python tools/seasense_probe.py COM<n>` through the
   adapter, or `hil_test.py` on that port read-only, and compare with the USB run.
-- Dimming visibly following LOUT (needs mains on - never with USB connected).
+
+Checked by hand, not automated (2026-10-16): the app works the same over the
+RS-485 adapter as over USB, and the light visibly dims with LOUT (mains on,
+USB disconnected).

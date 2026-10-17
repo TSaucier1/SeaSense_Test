@@ -17,11 +17,10 @@ Used by tests/test_app.py.  You can also try the app against it by hand:
 
 Behaviour that depends on HOW you are connected is chosen with port_type:
     "usb"   - the light's internal micro-USB port (FW 1.4.1006):
-              FACT? answers "?" (no unlock needed).  SAVE answers "System
-              settings written" after FSET, but "?" after FTEN / FPRT alone
-              (the settings are kept anyway).
-    "rs485" - the external serial pins: factory commands need a FACT unlock,
-              SAVE answers "System settings written".
+              FACT? answers "?" (no unlock needed).
+    "rs485" - the external serial pins: factory commands need a FACT unlock.
+On both, SAVE answers "System settings written" only when something is
+unsaved (a LOUT write, or FSET with new values), otherwise "?".
 
 If a real light ever answers differently, change the matching line here,
 note the firmware / port / date next to it, and add a test.
@@ -57,7 +56,7 @@ class FakeLight:
         self.unlocked = False
         self.fact_key = None
         self.reset_key = None
-        self.fset_unsaved = False               # FSET sent, no SAVE since
+        self.unsaved = False                    # a setting was written since the last SAVE
         self.listening = True                   # False once FPRT moves it to the other port
 
 
@@ -181,6 +180,10 @@ class FakeBus:
                 light.lout = min(100, light.lout + value)
             elif access == "-":
                 light.lout = max(0, light.lout - value)
+            # Captured (FW 1.4.1006, USB, 2026-10-16): LOUT=10 then LOUT=1 made
+            # the next SAVE answer "written" - any LOUT write counts, even one
+            # that ends at the old value.
+            light.unsaved = True
             return ACK
         if command == "stby" and access == "=":
             light.stby = int(data)
@@ -206,12 +209,15 @@ class FakeBus:
             light.boot = int(data)
             return ACK
         if command == "fset" and access == "=":
-            serial_number, dimming, color, beam = data.split(",")
-            # Applied straight away: on FW 1.4.1006 INFO showed the new values
-            # even when SAVE answered "?"
-            light.serial_number, light.dimming, light.color, light.beam = \
-                serial_number, dimming, color, beam
-            light.fset_unsaved = True
+            new = tuple(data.split(","))
+            serial_number, dimming, color, beam = new
+            # Captured (FW 1.4.1006, USB, 2026-10-16): FSET with the SAME values
+            # leaves nothing to save (SAVE -> "?").  New values gave "System
+            # settings written" on FW 1.4.1001; assumed the same here.
+            if new != (light.serial_number, light.dimming, light.color, light.beam):
+                light.unsaved = True
+            # Applied straight away: INFO shows the new values before SAVE
+            light.serial_number, light.dimming, light.color, light.beam = new
             return ACK
         if command == "ften" and access == "=":
             light.termination = int(data)
@@ -231,15 +237,13 @@ class FakeBus:
                 light.listening = False
             return ACK
         if command == "save" and access == "":
-            # USB, FW 1.4.1006, HIL run 2026-10-16 (values unchanged):
-            #   FSET -> SAVE  answered "System settings written"
-            #   FTEN -> FPRT -> SAVE  answered "?" (settings kept anyway)
-            # An earlier run on the same firmware saw "?" after FSET too, so the
-            # app must accept either; tests force that case with bus.refuse.
-            written, light.fset_unsaved = light.fset_unsaved, False
-            if usb and not written:
-                return NAK
-            return "System settings written\r\n"
+            # Captured (FW 1.4.1006, USB, 2026-10-16): SAVE answers "System
+            # settings written" only if something is unsaved, otherwise "?" -
+            # "?" means "nothing to save", not "refused".  FTEN / FPRT never
+            # count: they store themselves (SAVE gave "?" after them even
+            # when they changed, on the bare board).
+            written, light.unsaved = light.unsaved, False
+            return "System settings written\r\n" if written else NAK
         if command == "rset" and access == "=":
             if data == light.reset_key:
                 address = light.address

@@ -1,0 +1,160 @@
+[
+ {
+  "command": "!001:SAVE",
+  "sent": "b'!001:SAVE\\r\\n'",
+  "raw": "b'!\\n?\\r\\n'",
+  "chunks": [
+   [
+    0.0,
+    "b'!\\n?\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:SAVE",
+  "sent": "b'!001:SAVE\\r\\n'",
+  "raw": "b'!\\n?\\r\\n'",
+  "chunks": [
+   [
+    1.0,
+    "b'!\\n?\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:FSET=12-049-05581,SER,DW00,FLD",
+  "sent": "b'!001:FSET=12-049-05581,SER,DW00,FLD\\r\\n'",
+  "raw": "b'!\\n\\r\\n'",
+  "chunks": [
+   [
+    15.1,
+    "b'!\\n\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:SAVE",
+  "sent": "b'!001:SAVE\\r\\n'",
+  "raw": "b'!\\n?\\r\\n'",
+  "chunks": [
+   [
+    2.4,
+    "b'!\\n?\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:LOUT=10",
+  "sent": "b'!001:LOUT=10\\r\\n'",
+  "raw": "b'!\\n\\r\\n'",
+  "chunks": [
+   [
+    15.0,
+    "b'!\\n\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:LOUT=1",
+  "sent": "b'!001:LOUT=1\\r\\n'",
+  "raw": "b'!\\n\\r\\n'",
+  "chunks": [
+   [
+    15.0,
+    "b'!\\n\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:SAVE",
+  "sent": "b'!001:SAVE\\r\\n'",
+  "raw": "b'!\\nSystem settings written\\r\\n'",
+  "chunks": [
+   [
+    16.8,
+    "b'!\\nSystem settings written\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:SAVE",
+  "sent": "b'!001:SAVE\\r\\n'",
+  "raw": "b'!\\n?\\r\\n'",
+  "chunks": [
+   [
+    1.8,
+    "b'!\\n?\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:FTEN=1",
+  "sent": "b'!001:FTEN=1\\r\\n'",
+  "raw": "b'!\\n\\r\\n'",
+  "chunks": [
+   [
+    15.8,
+    "b'!\\n\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:SAVE",
+  "sent": "b'!001:SAVE\\r\\n'",
+  "raw": "b'!\\n?\\r\\n'",
+  "chunks": [
+   [
+    0.0,
+    "b'!'"
+   ],
+   [
+    1.0,
+    "b'\\n?\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:LOUT?",
+  "sent": "b'!001:LOUT?\\r\\n'",
+  "raw": "b'!\\n1\\r\\n'",
+  "chunks": [
+   [
+    1.1,
+    "b'!\\n1\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:INFO?",
+  "sent": "b'!001:INFO?\\r\\n'",
+  "raw": "b'!\\n001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2\\r\\n'",
+  "chunks": [
+   [
+    14.8,
+    "b'!\\n001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:FPRT?",
+  "sent": "b'!001:FPRT?\\r\\n'",
+  "raw": "b'!\\nRS4,1\\r\\n'",
+  "chunks": [
+   [
+    15.5,
+    "b'!\\nRS4,1\\r\\n'"
+   ]
+  ]
+ },
+ {
+  "command": "!001:FTEN?",
+  "sent": "b'!001:FTEN?\\r\\n'",
+  "raw": "b'!\\n1\\r\\n'",
+  "chunks": [
+   [
+    1.5,
+    "b'!\\n1\\r\\n'"
+   ]
+  ]
+ }
+]
