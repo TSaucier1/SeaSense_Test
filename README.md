@@ -150,7 +150,8 @@ FACT unlock (if the light asks) -> `FSET=<serial>,SER,<color>,<beam>` -> `SAVE` 
 `FTEN=1` -> `FPRT=RS4,1` -> `SAVE` -> `INFO?` / `FPRT?` / `FTEN?`
 
 and reports OK / FAIL for serial number, dimming, port and termination. It stops
-if FSET or FTEN is refused. Power-cycle the light afterwards and connect on RS-485.
+if FSET or FTEN is refused; a `?` reply to SAVE is normal and does not stop it.
+Power-cycle the light afterwards, connect on RS-485 and use *Read all* to confirm.
 
 ### LSL-1000 vs LSL-2000
 
@@ -250,7 +251,10 @@ bus.
 internal USB port) `SAVE` answered `?` after FTEN and after FPRT, yet both settings
 were kept - a later probe read back `RS4,1` and termination `1`. They store
 themselves. SAVE answered `System settings written` after FSET on the original
-board (FW 1.4.1001). Confirm with `!001:FPRT?` and `!001:FTEN?`.
+board (FW 1.4.1001), but `?` after FSET on the FW 1.4.1006 board (that time the
+values were unchanged). So the app never treats a SAVE reply as a failure: it
+reads the settings back instead. Confirm with `!001:FPRT?` and `!001:FTEN?`, and
+after a power cycle with *Read all*.
 
 **Verified end to end:** that replacement board arrived with a bare flash and was
 set up entirely from this app (FSET with serial number / SER / color / beam, then

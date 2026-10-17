@@ -1262,7 +1262,7 @@ class App(tk.Tk):
                 "  Serial number: %s\n  Dimming: %s (serial)\n  LED color: %s\n  Beam: %s\n"
                 "  Port: RS-485, 9600 baud\n  Termination resistor: on\n\n"
                 "Commands: FACT unlock (if asked), FSET=%s, SAVE, FTEN=%d, FPRT=%s, SAVE,\n"
-                "then INFO? / FPRT? / FTEN? to check.\n\n"
+                "then INFO? / FPRT? / FTEN? to check. A ? reply to SAVE is normal.\n\n"
                 "Check the serial number, color and beam against the housing labels.")
                 % (address, serial, self.SETUP_DIMMING, color, beam, fset,
                    self.SETUP_TERMINATION, self.SETUP_PORT), icon="warning"):
@@ -1271,10 +1271,11 @@ class App(tk.Tk):
         expected = {"serial": serial, "dimming": self.SETUP_DIMMING,
                     "port": self.SETUP_PORT, "termination": str(self.SETUP_TERMINATION)}
         # FTEN before FPRT: FPRT may move the light to the other port at once.
-        # SAVE after FTEN / FPRT may answer "?" even though both are kept, so
-        # those SAVEs never stop the sequence; the read-backs are the check.
+        # SAVE can answer "?" even when the setting is kept: seen after FTEN /
+        # FPRT, and after FSET on FW 1.4.1006 when the values were unchanged.
+        # So no SAVE ever stops the sequence; the read-backs are the check.
         steps = [("fset", "=", fset, "ack"),
-                 ("save", "", "", "answer"),
+                 ("save", "", "", "any"),
                  ("ften", "=", self.SETUP_TERMINATION, "ack"),
                  ("fprt", "=", self.SETUP_PORT, "any"),
                  ("save", "", "", "any"),
@@ -1307,7 +1308,9 @@ class App(tk.Tk):
         for line in lines:
             self.log_line("SETUP", line, "note" if line.startswith("OK") else "error")
         if all_ok:
-            messagebox.showinfo(APP_TITLE, "One-step setup complete:\n\n" + "\n".join(lines))
+            messagebox.showinfo(APP_TITLE, "One-step setup complete:\n\n" + "\n".join(lines) +
+                                "\n\nPower-cycle the light and use Read all to confirm the "
+                                "settings were kept.")
         else:
             messagebox.showwarning(APP_TITLE, (
                 "One-step setup finished, but not everything read back as expected:\n\n%s\n\n"
@@ -1334,7 +1337,7 @@ class App(tk.Tk):
                 "the housing.") % (address, data), icon="warning"):
             return
         self.run_factory_steps(address, [("fset", "=", data, "ack"),
-                                         ("save", "", "", "answer"),
+                                         ("save", "", "", "any"),
                                          ("info", "?", "", "answer")])
 
     def factory_port(self):
