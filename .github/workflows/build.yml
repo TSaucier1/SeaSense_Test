@@ -32,6 +32,12 @@ jobs:
       - name: Run protocol unit tests
         run: python -m unittest test_protocol.py -v
 
+      # The real app against a fake light (tools/fake_light.py) - see TESTING.md
+      - name: Run app tests on a fake light
+        env:
+          REQUIRE_TK: "1"        # fail instead of skipping if Tk cannot start
+        run: python -m unittest discover -s tests -v
+
       # Version number for this build, e.g. 1.0.5.  Used in the window
       # title, the .exe file name and the Release name so they always match.
       - name: Set version

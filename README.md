@@ -317,6 +317,13 @@ Unit tests (protocol only, no hardware needed):
 python -m unittest test_protocol.py
 ```
 
+## Testing
+
+See [TESTING.md](TESTING.md): protocol unit tests, app tests against a fake light
+(`tools/fake_light.py`, run on every build), and a hardware-in-the-loop runner
+(`tools/hil_test.py COM3`) that drives the real app against a real light and
+writes a PASS / FAIL report.
+
 ## Probing a light (tools/seasense_probe.py)
 
 A small read-only script, separate from the app, that sends each query and
@@ -345,4 +352,8 @@ checksum and a broadcast read all get only the `!<LF>` prefix; there is no
 | `seasense_protocol.py` | Command building, checksum, escapes, reply decoding (no GUI) |
 | `test_protocol.py` | Unit tests, including the spec's checksum examples |
 | `tools/seasense_probe.py` | Read-only probe that records a light's exact replies |
+| `tools/fake_light.py` | Fake light + fake serial port built from captured replies |
+| `tools/hil_test.py` | Hardware-in-the-loop test runner and report |
+| `tests/test_app.py` | App tests against the fake light |
+| `TESTING.md` | How to test, including a procedure for a local Claude Code session |
 | `.github/workflows/build.yml` | Builds the Windows .exe on every push |
