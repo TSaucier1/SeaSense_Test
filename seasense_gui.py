@@ -1271,8 +1271,9 @@ class App(tk.Tk):
         expected = {"serial": serial, "dimming": self.SETUP_DIMMING,
                     "port": self.SETUP_PORT, "termination": str(self.SETUP_TERMINATION)}
         # FTEN before FPRT: FPRT may move the light to the other port at once.
-        # SAVE can answer "?" even when the setting is kept: seen after FTEN /
-        # FPRT, and after FSET on FW 1.4.1006 when the values were unchanged.
+        # SAVE can answer "?" even when the setting is kept: always seen after
+        # FTEN / FPRT, and once after FSET on FW 1.4.1006 (another run on the
+        # same unit answered "System settings written" after FSET).
         # So no SAVE ever stops the sequence; the read-backs are the check.
         steps = [("fset", "=", fset, "ack"),
                  ("save", "", "", "any"),

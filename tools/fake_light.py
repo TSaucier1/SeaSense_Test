@@ -17,8 +17,9 @@ Used by tests/test_app.py.  You can also try the app against it by hand:
 
 Behaviour that depends on HOW you are connected is chosen with port_type:
     "usb"   - the light's internal micro-USB port (FW 1.4.1006):
-              FACT? answers "?" (no unlock needed), SAVE answers "?" but the
-              settings are kept anyway.
+              FACT? answers "?" (no unlock needed).  SAVE answers "System
+              settings written" after FSET, but "?" after FTEN / FPRT alone
+              (the settings are kept anyway).
     "rs485" - the external serial pins: factory commands need a FACT unlock,
               SAVE answers "System settings written".
 
@@ -56,7 +57,7 @@ class FakeLight:
         self.unlocked = False
         self.fact_key = None
         self.reset_key = None
-        self.pending_fset = None
+        self.fset_unsaved = False               # FSET sent, no SAVE since
         self.listening = True                   # False once FPRT moves it to the other port
 
 
@@ -207,9 +208,10 @@ class FakeBus:
         if command == "fset" and access == "=":
             serial_number, dimming, color, beam = data.split(",")
             # Applied straight away: on FW 1.4.1006 INFO showed the new values
-            # even though SAVE answered "?"
+            # even when SAVE answered "?"
             light.serial_number, light.dimming, light.color, light.beam = \
                 serial_number, dimming, color, beam
+            light.fset_unsaved = True
             return ACK
         if command == "ften" and access == "=":
             light.termination = int(data)
@@ -229,8 +231,15 @@ class FakeBus:
                 light.listening = False
             return ACK
         if command == "save" and access == "":
-            # USB, FW 1.4.1006: "?" after FSET, FTEN and FPRT - settings kept anyway
-            return NAK if usb else "System settings written\r\n"
+            # USB, FW 1.4.1006, HIL run 2026-10-16 (values unchanged):
+            #   FSET -> SAVE  answered "System settings written"
+            #   FTEN -> FPRT -> SAVE  answered "?" (settings kept anyway)
+            # An earlier run on the same firmware saw "?" after FSET too, so the
+            # app must accept either; tests force that case with bus.refuse.
+            written, light.fset_unsaved = light.fset_unsaved, False
+            if usb and not written:
+                return NAK
+            return "System settings written\r\n"
         if command == "rset" and access == "=":
             if data == light.reset_key:
                 address = light.address

@@ -195,6 +195,9 @@ class ReplyTests(unittest.TestCase):
         self.assertIn("ACK", parse_reply("adgr", "+", b"!\n\r\n")[0][1])
         # SAVE? and unknown commands: NAK
         self.assertIn("NAK", parse_reply("save", "?", b"!\n?\r\n")[0][1])
+        # SAVE (immediate) after FSET, HIL run 2026-10-16
+        self.assertEqual(parse_reply("save", "", b"!\nSystem settings written\r\n"),
+                         [("Result", "DATA"), ("Data", "System settings written")])
         self.assertIn("NAK", parse_reply("help", "?", b"!\n?\r\n")[0][1])
         # CHSW? on a CH1+2 unit, wrong checksum, wrong address, broadcast:
         # all just the prefix

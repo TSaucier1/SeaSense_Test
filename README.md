@@ -251,8 +251,10 @@ bus.
 internal USB port) `SAVE` answered `?` after FTEN and after FPRT, yet both settings
 were kept - a later probe read back `RS4,1` and termination `1`. They store
 themselves. SAVE answered `System settings written` after FSET on the original
-board (FW 1.4.1001), but `?` after FSET on the FW 1.4.1006 board (that time the
-values were unchanged). So the app never treats a SAVE reply as a failure: it
+board (FW 1.4.1001). On the FW 1.4.1006 board it answered `?` after FSET once and
+`System settings written` after FSET in the HIL run of 2026-10-16 (both times
+with unchanged values; FTEN / FPRT -> SAVE still gave `?`, see
+`docs/hil_report_20261016_221122.md`). So the app never treats a SAVE reply as a failure: it
 reads the settings back instead. Confirm with `!001:FPRT?` and `!001:FTEN?`, and
 after a power cycle with *Read all*.
 

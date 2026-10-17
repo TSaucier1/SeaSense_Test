@@ -1,0 +1,398 @@
+22:09:01.684  --   Opened COM3 at 9600 baud, 8N1
+22:09:02.036  TX   !001:info?*01<CR><LF>
+22:09:02.071  RX   !<LF>001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2<CR><LF>
+22:09:02.072  TX   !001:stat?*11<CR><LF>
+22:09:02.140  RX   !<LF>RunTime<TAB>PrCycle<TAB>MaxTemp<TAB>Temp1<TAB>Temp2<TAB>Temp3<TAB>Humid<TAB>FLAGS<CR><LF>2.2hr<TAB>13<TAB>102.3C<TAB>23.8C<TAB>21.0C<TAB>20.0C<TAB>31%<TAB>0x0000<CR><LF>
+22:09:02.151  TX   !001:temp?*0B<CR><LF>
+22:09:02.215  RX   !<LF>23.75<CR><LF>
+22:09:02.216  TX   !001:rhum?*11<CR><LF>
+22:09:02.282  RX   !<LF>31.06<CR><LF>
+22:09:02.284  TX   !001:lout?*19<CR><LF>
+22:09:02.346  RX   !<LF>1<CR><LF>
+22:09:02.348  TX   !001:stby?*17<CR><LF>
+22:09:02.415  RX   !<LF>0<CR><LF>
+22:09:02.416  TX   !001:fact?<CR><LF>
+22:09:02.481  RX   !<LF>?<CR><LF>
+22:09:02.484  --   Light did not ask for a FACT unlock - continuing (normal on the internal USB port)
+22:09:02.514  TX   !001:fprt?<CR><LF>
+22:09:02.580  RX   !<LF>RS4,1<CR><LF>
+22:09:02.612  TX   !001:ften?<CR><LF>
+22:09:02.680  RX   !<LF>1<CR><LF>
+22:09:02.946  TX   !001:adgr?*F3<CR><LF>
+22:09:03.014  RX   !<LF><CR><LF>
+22:09:03.281  TX   !001:boot?*09<CR><LF>
+22:09:03.315  RX   !<LF>Preset<TAB>STBY<TAB>LOUT<CR><LF>0:<TAB>0<TAB>1<TAB><CR><LF>
+22:09:03.614  TX   !001:curv?*15<CR><LF>
+22:09:03.647  RX   !<LF>1,100,0,3,53,92,4.50<CR><LF>
+22:09:03.915  TX   !001:pset?*11<CR><LF>
+22:09:03.979  RX   !<LF>Preset<TAB>STBY<TAB>LOUT<CR><LF>1:<TAB>0<TAB>100<CR><LF>2:<TAB>0<TAB>100<CR><LF>3:<TAB>0<TAB>100<CR><LF>4:<TAB>0<TAB>100<CR><LF>5:<TAB>0<TAB>100<CR><LF>6:<TAB>0<TAB>100<CR><LF>7:<TAB>0<TAB>100<CR><LF>8:<TAB>0<TAB>100<CR><LF>9:<TAB>0<TAB>100<CR><LF>10:<TAB>0<TAB>100<CR><LF>11:<TAB>0<TAB>100<CR><LF>12:<TAB>0<TAB>100<CR><LF>13:<TAB>0<TAB>100<CR><LF>14:<TAB>0<TAB>100<CR><LF>15:<TAB>0<TAB>100<CR><LF>16:<TAB>0<TAB>100<CR><LF>
+22:09:04.232  TX   !001:addr?*F0<CR><LF>
+22:09:04.295  RX   !<LF>001<CR><LF>
+22:09:04.298  --   Found a light at address 001
+22:09:04.300  TX   !002:addr?*F1<CR><LF>
+22:09:04.466  RX   !<LF>
+22:09:04.466  TX   !003:addr?*F2<CR><LF>
+22:09:04.630  RX   !<LF>
+22:09:04.630  TX   !004:addr?*F3<CR><LF>
+22:09:04.762  RX   !<LF>
+22:09:04.764  TX   !005:addr?*F4<CR><LF>
+22:09:04.930  RX   !<LF>
+22:09:04.930  TX   !006:addr?*F5<CR><LF>
+22:09:05.097  RX   !<LF>
+22:09:05.098  TX   !007:addr?*F6<CR><LF>
+22:09:05.230  RX   !<LF>
+22:09:05.231  TX   !008:addr?*F7<CR><LF>
+22:09:05.394  RX   !<LF>
+22:09:05.394  TX   !009:addr?*F8<CR><LF>
+22:09:05.552  RX   !<LF>
+22:09:05.557  TX   !010:addr?*F0<CR><LF>
+22:09:05.713  RX   !<LF>
+22:09:05.715  --   Scan finished. Lights found at: 001
+22:09:06.031  TX   !001:lout?*19<CR><LF>
+22:09:06.065  RX   !<LF>1<CR><LF>
+22:09:06.331  TX   !001:lout=10*78<CR><LF>
+22:09:06.365  RX   !<LF><CR><LF>
+22:09:06.631  TX   !001:lout?*19<CR><LF>
+22:09:06.698  RX   !<LF>10<CR><LF>
+22:09:06.978  TX   !001:lout=1*48<CR><LF>
+22:09:07.010  RX   !<LF><CR><LF>
+22:09:07.246  --   One-step setup: reading INFO from light 001
+22:09:07.280  TX   !001:info?*01<CR><LF>
+22:09:07.345  RX   !<LF>001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2<CR><LF>
+22:09:07.380  TX   !001:fact?<CR><LF>
+22:09:07.445  RX   !<LF>?<CR><LF>
+22:09:07.450  --   Light did not ask for a FACT unlock - continuing (normal on the internal USB port)
+22:09:07.476  TX   !001:fset=12-049-05581,SER,DW00,FLD<CR><LF>
+22:09:07.540  RX   !<LF><CR><LF>
+22:09:07.571  TX   !001:save<CR><LF>
+22:09:07.648  RX   !<LF>System settings written<CR><LF>
+22:09:07.664  TX   !001:ften=1<CR><LF>
+22:09:07.746  RX   !<LF><CR><LF>
+22:09:07.781  TX   !001:fprt=RS4,1<CR><LF>
+22:09:07.847  RX   !<LF><CR><LF>
+22:09:07.878  TX   !001:save<CR><LF>
+22:09:07.913  RX   !<LF>?<CR><LF>
+22:09:07.946  TX   !001:info?<CR><LF>
+22:09:08.015  RX   !<LF>001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2<CR><LF>
+22:09:08.049  TX   !001:fprt?<CR><LF>
+22:09:08.112  RX   !<LF>RS4,1<CR><LF>
+22:09:08.144  TX   !001:ften?<CR><LF>
+22:09:08.214  RX   !<LF>1<CR><LF>
+22:09:08.214  SETUP OK   Serial number: 12-049-05581
+22:09:08.214  SETUP OK   Dimming: SER
+22:09:08.214  SETUP OK   Serial port: RS4,1
+22:09:08.214  SETUP OK   Termination: 1
+22:09:08.581  TX   !001:info?*01<CR><LF>
+22:09:08.648  RX   !<LF>001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2<CR><LF>
+22:09:08.655  TX   !001:stat?*11<CR><LF>
+22:09:08.714  RX   !<LF>RunTime<TAB>PrCycle<TAB>MaxTemp<TAB>Temp1<TAB>Temp2<TAB>Temp3<TAB>Humid<TAB>FLAGS<CR><LF>2.2hr<TAB>13<TAB>102.3C<TAB>23.8C<TAB>21.0C<TAB>20.0C<TAB>31%<TAB>0x0000<CR><LF>
+22:09:08.719  TX   !001:temp?*0B<CR><LF>
+22:09:08.779  RX   !<LF>23.77<CR><LF>
+22:09:08.784  TX   !001:rhum?*11<CR><LF>
+22:09:08.850  RX   !<LF>30.89<CR><LF>
+22:09:08.856  TX   !001:lout?*19<CR><LF>
+22:09:08.945  RX   !<LF>1<CR><LF>
+22:09:08.945  TX   !001:stby?*17<CR><LF>
+22:09:09.009  RX   !<LF>0<CR><LF>
+22:09:09.009  TX   !001:fact?<CR><LF>
+22:09:09.113  RX   !<LF>?<CR><LF>
+22:09:09.113  --   Light did not ask for a FACT unlock - continuing (normal on the internal USB port)
+22:09:09.147  TX   !001:fprt?<CR><LF>
+22:09:09.213  RX   !<LF>RS4,1<CR><LF>
+22:09:09.245  TX   !001:ften?<CR><LF>
+22:09:09.308  RX   !<LF>1<CR><LF>
+22:09:09.547  --   Port closed
+22:11:20.442  --   Opened COM3 at 9600 baud, 8N1
+22:11:20.783  TX   !001:info?*01<CR><LF>
+22:11:20.850  RX   !<LF>001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2<CR><LF>
+22:11:20.890  TX   !001:stat?*11<CR><LF>
+22:11:20.936  RX   !<LF>RunTime<TAB>PrCycle<TAB>MaxTemp<TAB>Temp1<TAB>Temp2<TAB>Temp3<TAB>Humid<TAB>FLAGS<CR><LF>1.7hr<TAB>14<TAB>102.3C<TAB>23.7C<TAB>21.0C<TAB>20.0C<TAB>31%<TAB>0x0000<CR><LF>
+22:11:20.954  TX   !001:temp?*0B<CR><LF>
+22:11:21.003  RX   !<LF>23.72<CR><LF>
+22:11:21.006  TX   !001:rhum?*11<CR><LF>
+22:11:21.068  RX   !<LF>31.10<CR><LF>
+22:11:21.073  TX   !001:lout?*19<CR><LF>
+22:11:21.135  RX   !<LF>1<CR><LF>
+22:11:21.143  TX   !001:stby?*17<CR><LF>
+22:11:21.252  RX   !<LF>0<CR><LF>
+22:11:21.255  TX   !001:fact?<CR><LF>
+22:11:21.301  RX   !<LF>?<CR><LF>
+22:11:21.307  --   Light did not ask for a FACT unlock - continuing (normal on the internal USB port)
+22:11:21.334  TX   !001:fprt?<CR><LF>
+22:11:21.399  RX   !<LF>RS4,1<CR><LF>
+22:11:21.435  TX   !001:ften?<CR><LF>
+22:11:21.502  RX   !<LF>1<CR><LF>
+22:11:21.802  TX   !001:info?*01<CR><LF>
+22:11:21.869  RX   !<LF>001,LSL-1000,12-049-05581,0A,1.4.1006,DW00,FLD,SER,CH1+2<CR><LF>
+22:11:21.870  TX   !001:stat?*11<CR><LF>
+22:11:21.934  RX   !<LF>RunTime<TAB>PrCycle<TAB>MaxTemp<TAB>Temp1<TAB>Temp2<TAB>Temp3<TAB>Humid<TAB>FLAGS<CR><LF>1.7hr<TAB>14<TAB>102.3C<TAB>23.7C<TAB>21.0C<TAB>19.9C<TAB>31%<TAB>0x0000<CR><LF>
+22:11:21.934  TX   !001:temp?*0B<CR><LF>
+22:11:22.028  RX   !<LF>23.72<CR><LF>
+22:11:22.028  TX   !001:rhum?*11<CR><LF>
+22:11:22.091  RX   !<LF>31.02<CR><LF>
+22:11:22.091  TX   !001:lout?*19<CR><LF>
+22:11:22.168  RX   !<LF>1<CR><LF>
+22:11:22.170  TX   !001:stby?*17<CR><LF>
+22:11:22.269  RX   !<LF>0<CR><LF>
+22:11:22.270  TX   !001:fact?<CR><LF>
+22:11:22.336  RX   !<LF>?<CR><LF>
+22:11:22.337  --   Light did not ask for a FACT unlock - continuing (normal on the internal USB port)
+22:11:22.373  TX   !001:fprt?<CR><LF>
+22:11:22.451  RX   !<LF>RS4,1<CR><LF>
+22:11:22.483  TX   !001:ften?<CR><LF>
+22:11:22.551  RX   !<LF>1<CR><LF>
+
+
+===== Parsed replies =====
+22:09:02  !001:info?*01<CR><LF>
+    Result:                DATA
+    Address:               001
+    Model:                 LSL-1000
+    Serial number:         12-049-05581
+    PCB version:           0A
+    Firmware version:      1.4.1006
+    LED color:             DW00 = Daylight White
+    Beam pattern:          FLD = Flood (75°)
+    Dimming control:       SER = Serial RS-232/485
+    Output channels:       CH1+2 = dual output
+22:09:02  !001:stat?*11<CR><LF>
+    Result:                DATA
+    RunTime:               2.2hr
+    PrCycle:               13
+    MaxTemp:               102.3C
+    Temp1:                 23.8C
+    Temp2:                 21.0C
+    Temp3:                 20.0C
+    Humid:                 31%
+    FLAGS:                 0x0000
+22:09:02  !001:temp?*0B<CR><LF>
+    Result:                DATA
+    Internal temperature:  23.75 °C
+22:09:02  !001:rhum?*11<CR><LF>
+    Result:                DATA
+    Internal humidity:     31.06 %RH
+22:09:02  !001:lout?*19<CR><LF>
+    Result:                DATA
+    Light output:          1 %
+22:09:02  !001:stby?*17<CR><LF>
+    Result:                DATA
+    Standby:               0 = Active (full power)
+22:09:02  !001:fact?<CR><LF>
+    Result:                No unlock needed (normal on the internal USB port)
+22:09:02  !001:fprt?<CR><LF>
+    Result:                DATA
+    Serial port:           RS4,1 = RS-485, 9600 baud
+22:09:02  !001:ften?<CR><LF>
+    Result:                DATA
+    Termination resistor:  1 = On
+22:09:03  !001:adgr?*F3<CR><LF>
+    Result:                DATA
+    Group addresses:       (none)
+22:09:03  !001:boot?*09<CR><LF>
+    Result:                DATA
+    Boot preset:           0
+    Preset 0:              STBY=0, LOUT=1
+22:09:03  !001:curv?*15<CR><LF>
+    Result:                DATA
+    YMIN (%):              1
+    YMAX (%):              100
+    A (turn-on):           0
+    B (linear start):      3
+    C (exp start):         53
+    D (max point):         92
+    e (exponent):          4.50
+22:09:03  !001:pset?*11<CR><LF>
+    Result:                DATA
+    Preset 1:              STBY=0, LOUT=100
+    Preset 2:              STBY=0, LOUT=100
+    Preset 3:              STBY=0, LOUT=100
+    Preset 4:              STBY=0, LOUT=100
+    Preset 5:              STBY=0, LOUT=100
+    Preset 6:              STBY=0, LOUT=100
+    Preset 7:              STBY=0, LOUT=100
+    Preset 8:              STBY=0, LOUT=100
+    Preset 9:              STBY=0, LOUT=100
+    Preset 10:             STBY=0, LOUT=100
+    Preset 11:             STBY=0, LOUT=100
+    Preset 12:             STBY=0, LOUT=100
+    Preset 13:             STBY=0, LOUT=100
+    Preset 14:             STBY=0, LOUT=100
+    Preset 15:             STBY=0, LOUT=100
+    Preset 16:             STBY=0, LOUT=100
+22:09:05  Bus scan
+    Lights found:          001
+22:09:06  !001:lout?*19<CR><LF>
+    Result:                DATA
+    Light output:          1 %
+22:09:06  !001:lout=10*78<CR><LF>
+    Result:                ACK (command accepted)
+22:09:06  !001:lout?*19<CR><LF>
+    Result:                DATA
+    Light output:          10 %
+22:09:07  !001:lout=1*48<CR><LF>
+    Result:                ACK (command accepted)
+22:09:07  !001:info?*01<CR><LF>
+    Result:                DATA
+    Address:               001
+    Model:                 LSL-1000
+    Serial number:         12-049-05581
+    PCB version:           0A
+    Firmware version:      1.4.1006
+    LED color:             DW00 = Daylight White
+    Beam pattern:          FLD = Flood (75°)
+    Dimming control:       SER = Serial RS-232/485
+    Output channels:       CH1+2 = dual output
+22:09:07  !001:fact?<CR><LF>
+    Result:                No unlock needed (normal on the internal USB port)
+22:09:07  !001:fset=12-049-05581,SER,DW00,FLD<CR><LF>
+    Result:                ACK (command accepted)
+22:09:07  !001:save<CR><LF>
+    Result:                DATA
+    Data:                  System settings written
+22:09:07  !001:ften=1<CR><LF>
+    Result:                ACK (command accepted)
+22:09:07  !001:fprt=RS4,1<CR><LF>
+    Result:                ACK (command accepted)
+22:09:07  !001:save<CR><LF>
+    Result:                NAK (light refused: unknown command or value out of range)
+22:09:08  !001:info?<CR><LF>
+    Result:                DATA
+    Address:               001
+    Model:                 LSL-1000
+    Serial number:         12-049-05581
+    PCB version:           0A
+    Firmware version:      1.4.1006
+    LED color:             DW00 = Daylight White
+    Beam pattern:          FLD = Flood (75°)
+    Dimming control:       SER = Serial RS-232/485
+    Output channels:       CH1+2 = dual output
+22:09:08  !001:fprt?<CR><LF>
+    Result:                DATA
+    Serial port:           RS4,1 = RS-485, 9600 baud
+22:09:08  !001:ften?<CR><LF>
+    Result:                DATA
+    Termination resistor:  1 = On
+22:09:08  !001:info?*01<CR><LF>
+    Result:                DATA
+    Address:               001
+    Model:                 LSL-1000
+    Serial number:         12-049-05581
+    PCB version:           0A
+    Firmware version:      1.4.1006
+    LED color:             DW00 = Daylight White
+    Beam pattern:          FLD = Flood (75°)
+    Dimming control:       SER = Serial RS-232/485
+    Output channels:       CH1+2 = dual output
+22:09:08  !001:stat?*11<CR><LF>
+    Result:                DATA
+    RunTime:               2.2hr
+    PrCycle:               13
+    MaxTemp:               102.3C
+    Temp1:                 23.8C
+    Temp2:                 21.0C
+    Temp3:                 20.0C
+    Humid:                 31%
+    FLAGS:                 0x0000
+22:09:08  !001:temp?*0B<CR><LF>
+    Result:                DATA
+    Internal temperature:  23.77 °C
+22:09:08  !001:rhum?*11<CR><LF>
+    Result:                DATA
+    Internal humidity:     30.89 %RH
+22:09:08  !001:lout?*19<CR><LF>
+    Result:                DATA
+    Light output:          1 %
+22:09:09  !001:stby?*17<CR><LF>
+    Result:                DATA
+    Standby:               0 = Active (full power)
+22:09:09  !001:fact?<CR><LF>
+    Result:                No unlock needed (normal on the internal USB port)
+22:09:09  !001:fprt?<CR><LF>
+    Result:                DATA
+    Serial port:           RS4,1 = RS-485, 9600 baud
+22:09:09  !001:ften?<CR><LF>
+    Result:                DATA
+    Termination resistor:  1 = On
+22:11:20  !001:info?*01<CR><LF>
+    Result:                DATA
+    Address:               001
+    Model:                 LSL-1000
+    Serial number:         12-049-05581
+    PCB version:           0A
+    Firmware version:      1.4.1006
+    LED color:             DW00 = Daylight White
+    Beam pattern:          FLD = Flood (75°)
+    Dimming control:       SER = Serial RS-232/485
+    Output channels:       CH1+2 = dual output
+22:11:20  !001:stat?*11<CR><LF>
+    Result:                DATA
+    RunTime:               1.7hr
+    PrCycle:               14
+    MaxTemp:               102.3C
+    Temp1:                 23.7C
+    Temp2:                 21.0C
+    Temp3:                 20.0C
+    Humid:                 31%
+    FLAGS:                 0x0000
+22:11:21  !001:temp?*0B<CR><LF>
+    Result:                DATA
+    Internal temperature:  23.72 °C
+22:11:21  !001:rhum?*11<CR><LF>
+    Result:                DATA
+    Internal humidity:     31.10 %RH
+22:11:21  !001:lout?*19<CR><LF>
+    Result:                DATA
+    Light output:          1 %
+22:11:21  !001:stby?*17<CR><LF>
+    Result:                DATA
+    Standby:               0 = Active (full power)
+22:11:21  !001:fact?<CR><LF>
+    Result:                No unlock needed (normal on the internal USB port)
+22:11:21  !001:fprt?<CR><LF>
+    Result:                DATA
+    Serial port:           RS4,1 = RS-485, 9600 baud
+22:11:21  !001:ften?<CR><LF>
+    Result:                DATA
+    Termination resistor:  1 = On
+22:11:21  !001:info?*01<CR><LF>
+    Result:                DATA
+    Address:               001
+    Model:                 LSL-1000
+    Serial number:         12-049-05581
+    PCB version:           0A
+    Firmware version:      1.4.1006
+    LED color:             DW00 = Daylight White
+    Beam pattern:          FLD = Flood (75°)
+    Dimming control:       SER = Serial RS-232/485
+    Output channels:       CH1+2 = dual output
+22:11:21  !001:stat?*11<CR><LF>
+    Result:                DATA
+    RunTime:               1.7hr
+    PrCycle:               14
+    MaxTemp:               102.3C
+    Temp1:                 23.7C
+    Temp2:                 21.0C
+    Temp3:                 19.9C
+    Humid:                 31%
+    FLAGS:                 0x0000
+22:11:22  !001:temp?*0B<CR><LF>
+    Result:                DATA
+    Internal temperature:  23.72 °C
+22:11:22  !001:rhum?*11<CR><LF>
+    Result:                DATA
+    Internal humidity:     31.02 %RH
+22:11:22  !001:lout?*19<CR><LF>
+    Result:                DATA
+    Light output:          1 %
+22:11:22  !001:stby?*17<CR><LF>
+    Result:                DATA
+    Standby:               0 = Active (full power)
+22:11:22  !001:fact?<CR><LF>
+    Result:                No unlock needed (normal on the internal USB port)
+22:11:22  !001:fprt?<CR><LF>
+    Result:                DATA
+    Serial port:           RS4,1 = RS-485, 9600 baud
+22:11:22  !001:ften?<CR><LF>
+    Result:                DATA
+    Termination resistor:  1 = On
+

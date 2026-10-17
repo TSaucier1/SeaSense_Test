@@ -174,7 +174,8 @@ class SliderTests(AppTestCase):
 
 
 class OneStepUsbTests(AppTestCase):
-    """Internal USB port, FW 1.4.1006: no FACT unlock, SAVE always answers '?'."""
+    """Internal USB port, FW 1.4.1006: no FACT unlock; SAVE answers 'System
+    settings written' after FSET and '?' after FTEN / FPRT."""
 
     def test_configures_and_verifies(self):
         self.app.one_step_setup()
@@ -188,8 +189,17 @@ class OneStepUsbTests(AppTestCase):
         for item in ("Serial number", "Dimming", "Serial port", "Termination"):
             self.assertIn("SETUP  OK   " + item, self.raw_log().replace("SETUP OK", "SETUP  OK"))
 
+    def test_save_replies_match_hardware(self):
+        # HIL run 2026-10-16, USB, FW 1.4.1006: the two SAVEs of one-step setup
+        self.app.one_step_setup()
+        self.pump_until(lambda: self.dialog("info") or self.dialog("error"))
+        saves = [reply for line, reply in self.bus.log if line.lower() == "!001:save"]
+        self.assertEqual(saves, ["System settings written\r\n", "?\r\n"])
+        self.assertTrue(self.dialog("info"), self.dialogs)
+
     def test_save_refusal_does_not_stop_it(self):
-        # The bug seen on the real board: SAVE answered "?" after FSET
+        # Seen on the real board too: SAVE answered "?" even after FSET
+        self.bus.refuse.add("save")
         self.app.one_step_setup()
         self.pump_until(lambda: self.dialog("info") or self.dialog("error"))
         self.assertFalse(self.dialog("error"))
