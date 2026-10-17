@@ -9,7 +9,7 @@ from, or not obvious in** the *SeaSense Serial Protocol Specification*
 
 | Unit | Firmware | Notes |
 |---|---|---|
-| LSL-1000 (AC, 100-140 VAC), original driver board | 1.4.1001 | Shipped with dimming option `PV`; reconfigured to `SER`. Board later destroyed (wiring mistake, see §8) |
+| LSL-1000 (AC, 100-140 VAC), original driver board | 1.4.1001 | Shipped with dimming option `PV`; reconfigured to `SER`. Board later destroyed (wiring mistake, see §7) |
 | LSL-1000 replacement driver boards (2 boards) | 1.4.1006 | Arrived with a bare flash, configured from the SeaSense Light Tester app |
 
 Connections used: the light's **internal micro-USB port** (shows up in Windows as
@@ -44,7 +44,7 @@ Unless stated otherwise, captures are from FW 1.4.1006 over the internal USB por
    - a command addressed to a node that does not exist (`!002:INFO?` with only 001 present)
    - a **wrong checksum** (spec says the node stays silent; it actually sends `!\n`)
    - a broadcast read (`!000:STBY?`), which the spec forbids
-   - `CHSW?` on a dual-output (CH1+2) unit, which simply ignores it (§4)
+   - `CHSW?` on a dual-output (CH1+2) unit, which simply ignores it (§3)
 3. **The `!\n` appears to be sent for every command frame on the bus**, whoever
    it is addressed to. **[Captured]** over USB with one light. **[Unverified]**
    what happens on a multi-drop RS-485 bus with several lights: each may transmit
